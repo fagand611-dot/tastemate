@@ -1,0 +1,204 @@
+import { test, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import { openDb } from '../server/db.js';
+import { createApp } from '../server/app.js';
+import { seedSpots } from '../server/seed/seed.js';
+
+let server;
+let base;
+
+before(async () => {
+  const db = openDb(':memory:');
+  seedSpots(db);
+  server = createApp({ db, venueFeed: null }).listen(0);
+  await new Promise((r) => server.once('listening', r));
+  base = `http://localhost:${server.address().port}/api`;
+});
+after(() => server.close());
+
+/** A tiny client that keeps its own session cookie. */
+function client() {
+  let cookie = '';
+  const call = async (method, path, body) => {
+    const res = await fetch(base + path, {
+      method,
+      headers: { ...(body ? { 'content-type': 'application/json' } : {}), ...(cookie ? { cookie } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const set = res.headers.get('set-cookie');
+    if (set) cookie = set.split(';')[0];
+    return { status: res.status, body: await res.json() };
+  };
+  return {
+    get: (p) => call('GET', p),
+    post: (p, b = {}) => call('POST', p, b),
+    put: (p, b = {}) => call('PUT', p, b),
+    patch: (p, b = {}) => call('PATCH', p, b),
+    del: (p) => call('DELETE', p),
+  };
+}
+
+async function signup(username) {
+  const c = client();
+  const r = await c.post('/auth/register', { username, password: 'password123' });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  c.id = r.body.user.id;
+  return c;
+}
+
+async function befriend(a, b, bName) {
+  await a.post('/friends/request', { username: bName });
+  const r = await b.post(`/friends/${a.id}/accept`);
+  assert.equal(r.status, 200);
+}
+
+test('auth: register, me, logout, login, bad password', async () => {
+  const c = await signup('alice');
+  assert.equal((await c.get('/me')).body.user.username, 'alice');
+  await c.post('/auth/logout');
+  assert.equal((await c.get('/me')).body.user, null);
+  assert.equal((await c.get('/saves')).status, 401);
+  assert.equal((await c.post('/auth/login', { username: 'alice', password: 'nope-nope' })).status, 401);
+  assert.equal((await c.post('/auth/login', { username: 'ALICE', password: 'password123' })).status, 200);
+  assert.equal((await client().post('/auth/register', { username: 'alice', password: 'password123' })).status, 409);
+  assert.equal((await client().post('/auth/register', { username: 'x', password: 'password123' })).status, 400);
+});
+
+test('friends: request, accept, taste match, remove', async () => {
+  const a = await signup('fr_a');
+  const b = await signup('fr_b');
+  assert.equal((await a.post('/friends/request', { username: 'fr_a' })).status, 400);
+  assert.equal((await a.post('/friends/request', { username: 'nobody_here' })).status, 404);
+  assert.equal((await a.post('/friends/request', { username: 'fr_b' })).status, 201);
+  assert.deepEqual((await b.get('/friends')).body.incoming.map((u) => u.username), ['fr_a']);
+  await b.post(`/friends/${a.id}/accept`);
+  await a.post('/saves', { title: 'Late night jazz bar' });
+  await b.post('/saves', { title: 'Jazz café' });
+  const f = (await a.get('/friends')).body.friends;
+  assert.equal(f[0].username, 'fr_b');
+  assert.ok(f[0].match > 50);
+  await a.del(`/friends/${b.id}`);
+  assert.equal((await a.get('/friends')).body.friends.length, 0);
+});
+
+test('saves: import, add, retag, graph with tiered clusters', async () => {
+  const me = await signup('grapher');
+  const other = await signup('grapher_other');
+
+  // Import is idempotent: the same file twice adds nothing the second time.
+  const lib = JSON.stringify({ tracks: [{ artist: 'Miles Davis', track: 'So What', uri: 'spotify:track:1' }, { artist: 'Bill Evans', track: 'Peace Piece', uri: 'spotify:track:2' }] });
+  let r = await me.post('/saves/import', { source: 'spotify', text: lib });
+  assert.equal(r.body.added, 2);
+  r = await me.post('/saves/import', { source: 'spotify', text: lib });
+  assert.deepEqual([r.body.added, r.body.skipped], [0, 2]);
+  assert.equal((await me.post('/saves/import', { source: 'nope', text: lib })).status, 400);
+
+  r = await me.post('/saves/import', { source: 'google_maps', text: 'Title,Note,URL\nListening bar,records all night,https://maps.google.com/?cid=9\n' });
+  assert.equal(r.body.added, 1);
+  const { save } = (await me.post('/saves', { title: 'Candlelit wine bar', city: 'Dublin', url: 'javascript:x' })).body;
+  assert.equal(save.kind, 'place');
+  assert.equal(save.url, null);
+  assert.ok(save.tags.includes('intimate'));
+
+  const saves = (await me.get('/saves')).body.saves;
+  const song = saves.find((s) => s.title === 'So What');
+  assert.ok(song.tags.includes('jazz'), 'Miles Davis reads as jazz');
+  assert.equal((await me.patch(`/saves/${song.id}`, { tags: ['Jazz', 'chill', 'jazz'] })).body.save.tags.join(), 'jazz,chill');
+  assert.equal((await other.patch(`/saves/${song.id}`, { tags: [] })).status, 404, 'saves are private');
+  assert.equal((await other.del(`/saves/${song.id}`)).status, 404);
+
+  const graph = (await me.get('/graph')).body;
+  assert.equal(graph.total, 4);
+  const jazz = graph.patterns.find((p) => p.tags[0] === 'jazz');
+  assert.ok(jazz, JSON.stringify(graph.patterns.map((p) => p.tags)));
+  assert.ok(jazz.tiers.translated.some((x) => x.title === 'Listening bar'));
+  assert.ok(graph.possible > 0);
+});
+
+test('next: city, friends, save and dismiss, home city, your own saves there', async () => {
+  const me = await signup('nexter');
+  const pal = await signup('nexter_pal');
+  await me.post('/saves/import', { source: 'spotify', text: 'Miles Davis - So What\nJohn Coltrane - Naima' });
+  await me.post('/saves', { title: 'Vinyl listening bar', city: 'Bangkok' });
+  await befriend(me, pal, 'nexter_pal');
+
+  let next = (await me.get('/next?city=bangkok')).body;
+  assert.equal(next.city, 'Bangkok');
+  assert.deepEqual(next.yourSaves.map((s) => s.title), ['Vinyl listening bar']);
+  const jazz = next.events.find((e) => e.spot.tags.includes('jazz'));
+  assert.ok(jazz, 'a jazz event is suggested');
+  assert.ok(jazz.reasons.some((x) => x.type === 'saves'));
+  assert.ok(next.events.every((e) => e.spot.city === 'Bangkok'));
+  assert.ok(next.products.every((e) => !e.spot.city || e.spot.city === 'Bangkok'));
+
+  const place = next.places[0].spot;
+  await pal.post(`/spots/${place.id}/save`);
+  next = (await me.get('/next?city=Bangkok')).body;
+  assert.deepEqual(next.places.find((p) => p.spot.id === place.id).reasons.find((x) => x.type === 'friends').names, ['nexter_pal']);
+
+  await me.post(`/spots/${jazz.spot.id}/save`);
+  await me.post(`/spots/${place.id}/dismiss`);
+  next = (await me.get('/next?city=Bangkok')).body;
+  assert.ok(!next.events.some((e) => e.spot.id === jazz.spot.id));
+  assert.ok(!next.places.some((p) => p.spot.id === place.id));
+  assert.deepEqual(next.saved.map((s) => s.spot.id), [jazz.spot.id]);
+
+  await me.put('/settings', { home_city: 'London' });
+  assert.equal((await me.get('/me')).body.user.home_city, 'London');
+  assert.equal((await me.get('/next')).body.city, 'London');
+  assert.equal((await me.get('/next?from=2026-02-01&to=2026-01-01')).status, 400);
+  assert.equal((await me.post('/spots/99999/save')).status, 404);
+});
+
+test('events from posts: read a draft, save it, friends see it, strangers do not', async () => {
+  const me = await signup('poster');
+  const pal = await signup('poster_pal');
+  const stranger = await signup('poster_stranger');
+  await befriend(me, pal, 'poster_pal');
+
+  const { draft } = (await me.post('/spots/from-post', { text: 'JAZZ & COMEDY\nSat 14 Nov 2099, 8pm at The Stag, Dublin. €10', url: 'https://instagram.com/p/abc' })).body;
+  assert.equal(draft.starts_at, '2099-11-14T20:00');
+  assert.equal(draft.city, 'Dublin');
+  assert.equal((await me.post('/spots/from-post', { text: ' ' })).status, 400);
+
+  assert.equal((await me.post('/spots', { ...draft, starts_at: 'soon' })).status, 400);
+  assert.equal((await me.post('/spots', { ...draft, city: '' })).status, 400);
+  const { spot } = (await me.post('/spots', draft)).body;
+  assert.equal(spot.added_by, me.id);
+  assert.ok((await me.get('/saves')).body.saves.some((s) => s.spot_id === spot.id), 'it goes into your plan');
+
+  // A friend who likes jazz sees it, with your name on it.
+  await pal.post('/saves', { title: 'Jazz and comedy clips' });
+  const palNext = (await pal.get('/next?city=Dublin&from=2099-11-01&to=2099-11-30')).body;
+  const seen = palNext.events.find((e) => e.spot.id === spot.id);
+  assert.ok(seen);
+  assert.deepEqual(seen.reasons.find((x) => x.type === 'friends').names, ['poster']);
+
+  await stranger.post('/saves', { title: 'Jazz and comedy clips' });
+  const strangerNext = (await stranger.get('/next?city=Dublin&from=2099-11-01&to=2099-11-30')).body;
+  assert.ok(!strangerNext.events.some((e) => e.spot.id === spot.id));
+  assert.equal((await stranger.post(`/spots/${spot.id}/save`)).status, 404);
+
+  assert.equal((await me.post('/spots/refresh-posts')).status, 400, 'no venue feed configured');
+});
+
+test('occasion: a plan from your clusters, with a theme you can switch', async () => {
+  const me = await signup('host');
+  await me.post('/saves/import', { source: 'spotify', text: 'Miles Davis - So What\nBill Evans - Peace Piece\nJohn Coltrane - Naima' });
+  await me.post('/saves', { title: 'Vinyl listening bar', city: 'Dublin' });
+  await me.post('/saves', { title: 'Candlelit wine bar', city: 'Dublin' });
+  await me.put('/settings', { home_city: 'Dublin' });
+
+  const plan = (await me.get('/occasion?type=dinner')).body;
+  assert.equal(plan.occasion.type, 'dinner');
+  assert.ok(plan.theme.name.endsWith('supper'));
+  assert.equal(plan.drinks.wine.length, 3);
+  assert.ok(plan.playlist.fromSaves.length >= 2);
+  assert.ok(plan.invite.colors.bg && plan.invite.headline);
+  assert.ok(plan.shop.every((s) => !s.city || s.city === 'Dublin'));
+  if (plan.themes.length > 1) {
+    const other = plan.themes.find((t) => t.index !== plan.theme.index);
+    assert.equal((await me.get(`/occasion?type=dinner&theme=${other.index}`)).body.theme.index, other.index);
+  }
+  assert.equal((await me.get('/occasion?type=nonsense')).body.occasion.type, 'dinner');
+});
