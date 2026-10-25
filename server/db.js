@@ -89,7 +89,25 @@ export function openDb(file = process.env.DB_FILE || 'data/tastemate.db') {
   if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true });
   const db = new DatabaseSync(file);
   db.exec(SCHEMA);
+  migrate(db);
   return db;
+}
+
+/**
+ * Bring a database made by an earlier version up to this schema. CREATE TABLE
+ * IF NOT EXISTS leaves existing tables alone, so columns added since have to
+ * be added here.
+ */
+function migrate(db) {
+  const has = (table, col) => db.prepare(`PRAGMA table_info(${table})`).all().some((c) => c.name === col);
+  if (!has('users', 'home_city')) {
+    db.exec('ALTER TABLE users ADD COLUMN home_city TEXT');
+    // Earlier versions kept it in a separate table.
+    if (db.prepare(`SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'user_settings'`).get()) {
+      db.exec('UPDATE users SET home_city = (SELECT home_city FROM user_settings WHERE user_settings.user_id = users.id)');
+    }
+  }
+  if (!has('spots', 'added_by')) db.exec('ALTER TABLE spots ADD COLUMN added_by INTEGER REFERENCES users(id) ON DELETE CASCADE');
 }
 
 /** Run fn inside a transaction. */

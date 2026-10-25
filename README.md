@@ -36,6 +36,10 @@ npx kill-port 3001 5173
 npm run dev
 ```
 
+A `data/tastemate.db` left by an earlier version is upgraded in place when
+the server starts. To start over with a clean database instead, stop the
+server, delete the `data/` folder and run `npm run seed -- --demo` again.
+
 ### Production
 
 ```bash
