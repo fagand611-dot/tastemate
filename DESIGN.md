@@ -77,6 +77,25 @@ if at least two saves firmly support it and its saves span more than one
 kind of thing or more than one app. Each cluster lists its evidence by tier,
 so the UI can say *why jazz*.
 
+### Your Tastemate character and the taste universe
+
+The graph is shown to people as a character, not a chart (`tasteCharacter`,
+`tasteWeb`). The **name** comes from the strongest tag with an archetype
+("jazz" → *The Late-Night Listener*), the **tagline** from the next strongest
+outside that side ("with a candlelit streak"). **Sides** are the top three
+clusters with their share of saves. **Stretch** tastes are the strongest
+could-be signals the person rarely says outright, leaving out pure moods:
+the things to broaden into.
+
+The **taste universe** draws tags as bubbles (size = strength), coloured and
+haloed by side, joined by curved lines weighted by how often they're saved
+together (could-be signals count less). Side colours are three categorical
+slots validated as a set for colour-blind separation on both themes; text
+stays in text colours and every bubble is labelled, so colour is never the
+only cue. The same data is available as a cloud and as a plain list. **Why?**
+on a pick in Next is a flow: apps → shared tastes → the pick's match ring,
+with friends and other signals as grey streams and hints dashed.
+
 ## 5. Taste → action
 
 ### Next (`rankSpots`)

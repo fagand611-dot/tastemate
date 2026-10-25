@@ -3,7 +3,7 @@ import { requireUser } from '../auth.js';
 import { friendIds, hydrateSave, hydrateSpot, tx, upsertSpot } from '../db.js';
 import { parseImport } from '../importers.js';
 import { SAVE_KINDS, SAVE_SOURCES, autoTag, cleanTags, guessKind } from '../taxonomy.js';
-import { findPatterns, interpret, rankSpots, tasteProfile, topSaveTags } from '../taste-graph.js';
+import { findPatterns, interpret, rankSpots, tasteCharacter, tasteProfile, tasteWeb, topSaveTags } from '../taste-graph.js';
 import { parsePost } from '../posts.js';
 import { OCCASIONS, planOccasion } from '../occasions.js';
 
@@ -98,7 +98,8 @@ export default function savesRoutes(r, { db, venueFeed }) {
     const savedCities = {};
     for (const s of saves) if (s.city) savedCities[s.city] = (savedCities[s.city] || 0) + 1;
     const possible = saves.reduce((n, s) => n + s.signals.filter((x) => x.tier === 'possible').length, 0);
-    res.json({ tags: topSaveTags(profile), patterns: findPatterns(saves), total: saves.length, untagged: saves.filter((s) => !s.tags.length).length, possible, cities: savedCities });
+    const patterns = findPatterns(saves);
+    res.json({ tags: topSaveTags(profile), patterns, web: tasteWeb(saves, patterns, profile), character: tasteCharacter(saves, patterns, profile), total: saves.length, untagged: saves.filter((s) => !s.tags.length).length, possible, cities: savedCities });
   });
 
   // ----- Next: what to do, see and buy in a city, for a date range -----

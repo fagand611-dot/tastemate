@@ -72,11 +72,20 @@ posts still works.
     a Miles Davis track, "@bluenote.records").
   - **Could be:** goes with it, or matches your habits ("most of your
     intimate saves are also jazz").
+- **Your Tastemate character:** who your saves say you are, e.g. *The
+  Late-Night Listener, with a candlelit streak*: your top sides as shares,
+  the apps it was read from, and **stretch** tastes your saves point
+  towards but you haven't explored yet.
+- **Taste universe:** your tastes as floating bubbles (bigger = more
+  loved), glowing by side, with lines for what goes together. Tap one to see
+  *why it's you*. Also as a cloud, or a plain list.
 - **Next:** pick a city and Tomorrow, This weekend, Next 2 weeks or trip
   dates. Get events, places and things to buy, each explained by your own
   saves ("jazz: 4 on Spotify, 2 on Google Maps"), what friends saved, what
   just opened, and a boost for **under-the-radar** spots. Your own saves in
   that city come first, so a trip never forgets the café you starred years ago.
+  **Why?** on any pick draws the streams from your apps, through the tastes
+  they share, into the pick's match ring.
 - **Events from posts:** paste a venue's Instagram or Facebook post and
   Tastemate reads the date, time, venue, city and price into an event
   for you to check. Friends see it too. Optionally follow venue accounts

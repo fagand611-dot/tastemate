@@ -185,6 +185,139 @@ export function findPatterns(saves, { max = 5, minSaves = 3 } = {}) {
   return out;
 }
 
+/**
+ * The taste web: your strongest tags as nodes, joined where they show up in
+ * the same saves, each placed in the cluster it belongs to. Edge weight is
+ * the summed confidence of the pair (a could-be signal counts for less).
+ * Each node carries the saves behind it, firm signals first.
+ */
+export function tasteWeb(saves, clusters, profile, { maxNodes = 28, maxEdges = 60, minEdge = 0.7 } = {}) {
+  const all = ensure(saves);
+  const top = topSaveTags(profile, maxNodes);
+  const keep = new Set(top.map((t) => t.tag));
+  const pair = new Map();
+  const behind = new Map();
+  for (const s of all) {
+    const sig = s.signals.filter((x) => keep.has(x.tag));
+    for (const x of sig) {
+      if (!behind.has(x.tag)) behind.set(x.tag, []);
+      behind.get(x.tag).push({ id: s.id, title: s.title, kind: s.kind, source: s.source, tier: x.tier, via: x.via });
+    }
+    for (let i = 0; i < sig.length; i++) {
+      for (let j = i + 1; j < sig.length; j++) {
+        const [a, b] = [sig[i].tag, sig[j].tag].sort();
+        const key = `${a}|${b}`;
+        pair.set(key, (pair.get(key) || 0) + Math.min(sig[i].conf, sig[j].conf));
+      }
+    }
+  }
+  const edges = [...pair.entries()]
+    .filter(([, w]) => w >= minEdge)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, maxEdges)
+    .map(([key, w]) => {
+      const [a, b] = key.split('|');
+      return { a, b, w: +w.toFixed(2) };
+    });
+  const weightBetween = (a, b) => pair.get([a, b].sort().join('|')) || 0;
+  // A tag belongs to the first cluster that names it, else to the cluster
+  // whose seed it goes with most, else to none ("other tastes").
+  const clusterOf = (tag) => {
+    const named = clusters.findIndex((c) => c.tags.includes(tag));
+    if (named >= 0) return named;
+    let best = null;
+    let bestW = 1;
+    clusters.forEach((c, i) => {
+      const w = weightBetween(tag, c.tags[0]);
+      if (w >= bestW) [best, bestW] = [i, w];
+    });
+    return best;
+  };
+  const tierRank = { obvious: 0, translated: 1, possible: 2 };
+  const nodes = top.map(({ tag, weight }) => {
+    const list = (behind.get(tag) || []).sort((x, y) => tierRank[x.tier] - tierRank[y.tier]);
+    return {
+      id: tag,
+      weight,
+      cluster: clusterOf(tag),
+      firm: list.filter((x) => x.tier !== 'possible').length,
+      maybe: list.filter((x) => x.tier === 'possible').length,
+      saves: list.slice(0, 8),
+    };
+  });
+  return { nodes, edges, clusters: clusters.map((c, i) => ({ index: i, tags: c.tags })) };
+}
+
+// Moods and qualities: they describe a taste but aren't something to go and
+// try, so they never count as a stretch.
+const VIBE_WORDS = new Set(['chill', 'cerebral', 'moody', 'dark', 'atmospheric', 'intimate', 'romantic', 'lively', 'high-energy', 'uplifting', 'emotional', 'classic', 'cozy', 'vintage', 'minimal', 'epic', 'nostalgic', 'gritty', 'weird', 'luxe', 'food', 'tense', 'funny', 'hidden gem']);
+
+// Who a tag makes you: [archetype, the "side" it adds]. Checked in order of
+// your strongest tags, so the most specific match wins.
+const ARCHETYPES = {
+  jazz: ['Late-Night Listener', 'a jazz-bar soul'],
+  vinyl: ['Crate Digger', 'a record-shop streak'],
+  'dark academia': ['Library Ghost', 'a tweed-and-candles side'],
+  moody: ['Candlelit Romantic', 'a candlelit streak'],
+  pastry: ['Pastry Pilgrim', 'a weakness for croissants'],
+  coffee: ['Café Hopper', 'a café habit'],
+  'wine bar': ['Natural-Wine Wanderer', 'a natural-wine thirst'],
+  cocktails: ['Speakeasy Seeker', 'a hidden-bar habit'],
+  art: ['Gallery Wanderer', 'a gallery eye'],
+  architecture: ['Concrete Romantic', 'an eye for buildings'],
+  craft: ['Hand-Made Collector', 'a love of hand-made things'],
+  minimal: ['Quiet Minimalist', 'a minimalist streak'],
+  tailoring: ['Sharp Dresser', 'a sharp wardrobe'],
+  vintage: ['Second-Hand Treasure Hunter', 'a vintage soft spot'],
+  books: ['Bookshop Lingerer', 'a bookshop habit'],
+  house: ['Dancefloor Regular', 'a dancefloor side'],
+  techno: ['Warehouse Night Owl', 'a warehouse-rave side'],
+  'live music': ['Front-Row Regular', 'a live-music itch'],
+  comedy: ['Front-Row Laugher', 'a comedy-club side'],
+  folk: ['Fireside Folkie', 'a fireside-folk side'],
+  'street food': ['Night-Market Grazer', 'a street-food appetite'],
+  outdoors: ['Trail Seeker', 'an outdoors itch'],
+  cozy: ['Cosy-Corner Dweller', 'a cosy side'],
+  photography: ['Golden-Hour Chaser', 'a photographer’s eye'],
+};
+
+/**
+ * Your Tastemate character: a name from your strongest clusters, the sides
+ * that make it up, the apps it was read from, and "stretch" tastes: things
+ * your saves point towards that you haven't saved much yet.
+ */
+export function tasteCharacter(saves, clusters, profile) {
+  const all = ensure(saves);
+  if (!all.length) return null;
+  const ranked = [...profile.entries()].filter(([k]) => !k.startsWith('creator:')).sort((a, b) => b[1] - a[1]).map(([k]) => k);
+  const picks = ranked.filter((t) => ARCHETYPES[t]);
+  const main = picks[0] ? ARCHETYPES[picks[0]][0] : 'Curious Explorer';
+  const side = picks.find((t, i) => i > 0 && !clusters[0]?.tags.includes(t) && t !== picks[0]);
+  const total = clusters.reduce((n, c) => n + c.count + c.maybe, 0) || 1;
+  const sides = clusters.slice(0, 3).map((c, i) => ({ index: i, tags: c.tags, share: Math.round((100 * (c.count + c.maybe)) / total) }));
+  const apps = countBy(all.filter((s) => s.source !== 'tastemate'), (s) => s.source);
+  // Stretch: strongest could-be tags you rarely say outright.
+  const firm = new Map();
+  const maybe = new Map();
+  for (const s of all) for (const x of s.signals) {
+    const m = x.tier === 'possible' ? maybe : firm;
+    m.set(x.tag, (m.get(x.tag) || 0) + x.conf);
+  }
+  const stretch = [...maybe.entries()]
+    .filter(([t]) => (firm.get(t) || 0) < 1.5 && !VIBE_WORDS.has(t))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([t]) => t);
+  return {
+    name: `The ${main}`,
+    tagline: side ? `with ${ARCHETYPES[side][1]}` : null,
+    sides,
+    apps: Object.entries(apps).sort((a, b) => b[1] - a[1]).map(([source, n]) => ({ source, label: SOURCE_LABEL[source] || source, n })),
+    saves: all.length,
+    stretch,
+  };
+}
+
 function countBy(list, key) {
   const m = {};
   for (const x of list) m[key(x)] = (m[key(x)] || 0) + 1;

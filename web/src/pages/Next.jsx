@@ -4,6 +4,7 @@ import { api, qs } from '../api.js';
 import Icon, { SAVE_ICON, SPOT_ICON } from '../components/Icon.jsx';
 import { useActions } from '../components/actions.jsx';
 import { Empty, Loading, PageHead, useApi } from '../components/ui.jsx';
+import { Dialog, WhyFlow } from '../components/viz.jsx';
 
 const iso = (d) => d.toISOString().slice(0, 10);
 const plus = (n) => iso(new Date(Date.now() + n * 864e5));
@@ -260,6 +261,7 @@ function spotWhen(s) {
 
 function SpotCard({ spot, match, reasons, onAct }) {
   const [busy, setBusy] = useState(false);
+  const [why, setWhy] = useState(false);
   const go = async (a) => {
     setBusy(true);
     try {
@@ -287,9 +289,17 @@ function SpotCard({ spot, match, reasons, onAct }) {
         <SpotReasons reasons={reasons} />
         <div className="actions">
           <button disabled={busy} className="btn btn-sm btn-outline" onClick={() => go('save')}><Icon name="plus" size={16} /> Save</button>
+          <button className="btn btn-sm btn-ghost" onClick={() => setWhy(true)}><Icon name="graph" size={16} /> Why?</button>
           <button disabled={busy} className="icon-btn" aria-label="Not for me" title="Not for me" onClick={() => go('dismiss')}><Icon name="x" size={18} /></button>
         </div>
       </div>
+      {why && (
+        <Dialog title={`Why ${spot.title}`} onClose={() => setWhy(false)}>
+          <p className="muted small">How your saves connect to this pick. Wider bands mean more of your saves.</p>
+          <WhyFlow spot={spot} match={match} reasons={reasons} />
+          <SpotReasons reasons={reasons} />
+        </Dialog>
+      )}
     </article>
   );
 }

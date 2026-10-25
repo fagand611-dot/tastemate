@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import Icon, { SAVE_ICON } from '../components/Icon.jsx';
 import { useActions } from '../components/actions.jsx';
 import { Empty, Loading, PageHead, useApi } from '../components/ui.jsx';
+import { CharacterCard, TagCloud, TagTable, TasteWeb, clusterVar } from '../components/viz.jsx';
 
 export const SOURCE_LABEL = { spotify: 'Spotify', instagram: 'Instagram', google_maps: 'Google Maps', pinterest: 'Pinterest', manual: 'Added here', tastemate: 'Saved in Next' };
 const KIND_LABEL = { song: 'Songs', place: 'Places', look: 'Looks', product: 'Products', art: 'Art', food: 'Food', event: 'Events', other: 'Other' };
@@ -48,28 +49,56 @@ export default function Saves() {
   );
 }
 
+const VIEWS = [['web', 'Universe', 'graph'], ['cloud', 'Cloud', 'sparkle'], ['list', 'List', 'list']];
+
 function Graph({ g, onTag, active }) {
+  const navigate = useNavigate();
+  const [view, setView] = useState(() => {
+    try {
+      return localStorage.getItem('tm-graph-view') || 'web';
+    } catch {
+      return 'web';
+    }
+  });
+  const pick = (v) => {
+    setView(v);
+    try {
+      localStorage.setItem('tm-graph-view', v);
+    } catch {
+      /* private mode: keep it for this visit */
+    }
+  };
   if (!g.total) return <Empty>No saves yet. Import from an app below to see your taste graph.</Empty>;
-  const max = g.tags[0]?.weight || 1;
   return (
     <section className="graph">
+      <CharacterCard character={g.character} onStretch={() => navigate('/next')} />
+      <div className="graph-head">
+        <div>
+          <h2><Icon name="graph" /> Your taste universe</h2>
+          <p className="muted small">Everything you love, and what goes with what. This is what Next and Host pick from.</p>
+        </div>
+        <div className="seg" role="tablist" aria-label="View">
+          {VIEWS.map(([k, label, icon]) => (
+            <button key={k} role="tab" aria-selected={view === k} className={view === k ? 'on' : ''} onClick={() => pick(k)}>
+              <Icon name={icon} size={15} /> <span>{label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      {view === 'web' && <TasteWeb web={g.web} />}
+      {view === 'cloud' && <TagCloud web={g.web} active={active} onTag={onTag} />}
+      {view === 'list' && <TagTable web={g.web} />}
+      {g.untagged > 0 && <p className="muted small">{g.untagged} saves have no tags yet. Add a few below so they count.</p>}
+
       {g.patterns.length > 0 && (
         <>
-          <h2><Icon name="graph" /> Your taste clusters</h2>
+          <h2 className="clusters-title">Your taste clusters</h2>
           <p className="muted small">Read from everything you saved, not just what’s labelled: what says it outright, what means it, and what could be it.</p>
           <div className="patterns">
-            {g.patterns.map((p) => <Cluster key={p.tags.join()} p={p} />)}
+            {g.patterns.map((p, i) => <Cluster key={p.tags.join()} p={p} index={i} />)}
           </div>
         </>
       )}
-      <div className="cloud" aria-label="Your strongest tags">
-        {g.tags.map((t) => (
-          <button key={t.tag} className={`cloud-tag ${active === t.tag ? 'on' : ''}`} style={{ '--w': 0.8 + (t.weight / max) * 0.7 }} onClick={() => onTag(t.tag)}>
-            {t.tag}
-          </button>
-        ))}
-      </div>
-      {g.untagged > 0 && <p className="muted small">{g.untagged} saves have no tags yet. Add a few below so they count.</p>}
     </section>
   );
 }
@@ -81,12 +110,12 @@ const TIERS = [
 ];
 
 /** One cluster: its tags, where it shows up, and the evidence in three tiers. */
-function Cluster({ p }) {
+function Cluster({ p, index }) {
   const [open, setOpen] = useState(false);
   const seed = p.tags[0];
   return (
     <article className="pattern">
-      <h3>{p.tags.join(' · ')}</h3>
+      <h3><span className="viz-dot" style={{ background: clusterVar(index) }} />{p.tags.join(' · ')}</h3>
       <p className="muted small">
         {Object.entries(p.kinds).map(([k, n]) => `${n} ${KIND_LABEL[k].toLowerCase()}`).join(', ')}
         {' '}from {Object.keys(p.sources).map((s) => SOURCE_LABEL[s]).join(', ')}
