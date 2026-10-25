@@ -3,7 +3,8 @@ import { requireUser } from '../auth.js';
 import { friendIds, hydrateSave, hydrateSpot, tx, upsertSpot } from '../db.js';
 import { parseImport } from '../importers.js';
 import { SAVE_KINDS, SAVE_SOURCES, autoTag, cleanTags, guessKind } from '../taxonomy.js';
-import { findPatterns, interpret, rankSpots, tasteCharacter, tasteProfile, tasteWeb, topSaveTags } from '../taste-graph.js';
+import { cosine, findPatterns, interpret, perfectDay, rankSpots, tasteCharacter, tasteProfile, toPercent } from '../taste-graph.js';
+import { loadCreatorCache } from '../enrich.js';
 import { parsePost } from '../posts.js';
 import { OCCASIONS, planOccasion } from '../occasions.js';
 
@@ -11,7 +12,9 @@ const IMPORT_SOURCES = ['spotify', 'instagram', 'google_maps', 'pinterest'];
 const PER_KIND = { event: 12, place: 12, product: 8 };
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-export default function savesRoutes(r, { db, venueFeed }) {
+export default function savesRoutes(r, { db, venueFeed, enricher }) {
+  // Saves read with everything known about their artists.
+  const readSaves = (userId) => interpret(getSaves(userId), { cache: loadCreatorCache(db) });
   const getSaves = (userId) => db.prepare('SELECT * FROM saves WHERE user_id = ? ORDER BY COALESCE(saved_at, created_at) DESC, id DESC').all(userId).map(hydrateSave);
   const cities = () => db.prepare('SELECT DISTINCT city FROM spots WHERE city IS NOT NULL ORDER BY city').all().map((x) => x.city);
   const homeCity = (userId) => db.prepare('SELECT home_city FROM users WHERE id = ?').get(userId)?.home_city ?? null;
@@ -29,9 +32,10 @@ export default function savesRoutes(r, { db, venueFeed }) {
 
   // ----- Saves -----
   r.get('/saves', requireUser, (req, res) => {
-    const all = getSaves(req.user.id);
+    // Each save comes with its breakdown: what it says, grouped by facet.
+    const all = readSaves(req.user.id).map(({ signals, ...s }) => ({ ...s, facets: breakdown(signals) }));
     const count = (key) => all.reduce((m, s) => ({ ...m, [s[key]]: (m[s[key]] || 0) + 1 }), {});
-    res.json({ saves: all, counts: { kind: count('kind'), source: count('source') }, kinds: SAVE_KINDS, sources: SAVE_SOURCES });
+    res.json({ saves: all, counts: { kind: count('kind'), source: count('source') }, kinds: SAVE_KINDS, sources: SAVE_SOURCES, lookingUp: enricher.pending() });
   });
 
   r.post('/saves', requireUser, (req, res) => {
@@ -39,11 +43,12 @@ export default function savesRoutes(r, { db, venueFeed }) {
     const title = String(b.title || '').trim().slice(0, 200);
     if (!title) throw new HttpError(400, 'Title is required');
     const text = [title, b.creator, b.note, b.collection].map((x) => (x ? String(x).slice(0, 500) : null));
-    const tags = cleanTags([...(b.tags || []), ...autoTag(...text)]);
-    const kind = SAVE_KINDS.includes(b.kind) ? b.kind : guessKind(tags);
+    const tags = cleanTags([...(b.tags || []), ...autoTag(text[0], text[1], text[3], text[2], loadCreatorCache(db))]);
+    const kind = SAVE_KINDS.includes(b.kind) ? b.kind : guessKind(tags, text[1] ? 'song' : 'other');
     const id = db
       .prepare(`INSERT INTO saves (user_id, kind, title, creator, source, collection, url, note, city, tags) VALUES (?,?,?,?, 'manual', ?,?,?,?,?)`)
       .run(req.user.id, kind, title, text[1], text[3], cleanUrl(b.url), text[2], cleanCity(b.city), JSON.stringify(tags)).lastInsertRowid;
+    if (kind === 'song' && text[1]) enricher.queue([text[1]]);
     res.status(201).json({ save: hydrateSave(db.prepare('SELECT * FROM saves WHERE id = ?').get(id)) });
   });
 
@@ -71,6 +76,7 @@ export default function savesRoutes(r, { db, venueFeed }) {
     const { source, text } = req.body || {};
     if (!IMPORT_SOURCES.includes(source)) throw new HttpError(400, 'Unknown source');
     const rows = parseImport(source, text, { cities: cities() });
+    const cache = loadCreatorCache(db);
     let added = 0;
     let untagged = 0;
     tx(db, () => {
@@ -79,7 +85,7 @@ export default function savesRoutes(r, { db, venueFeed }) {
          VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`
       );
       for (const row of rows) {
-        const tags = cleanTags(autoTag(row.title, row.creator, row.collection, row.note));
+        const tags = cleanTags(autoTag(row.title, row.creator, row.collection, row.note, cache));
         const kind = row.kind === 'other' ? guessKind(tags) : row.kind;
         const r2 = ins.run(req.user.id, kind, row.title, row.creator ?? null, source, row.collection ?? null, row.url ?? null, row.note ?? null, row.city ?? null, JSON.stringify(tags), String(row.external_key).slice(0, 500), row.saved_at ?? null);
         if (r2.changes) {
@@ -88,18 +94,43 @@ export default function savesRoutes(r, { db, venueFeed }) {
         }
       }
     });
-    res.json({ found: rows.length, added, skipped: rows.length - added, untagged });
+    // Artists we don't know yet are looked up in the background; their saves fill in as answers arrive.
+    const lookingUp = enricher.queue(rows.filter((x) => x.kind === 'song' && x.creator).map((x) => x.creator));
+    res.json({ found: rows.length, added, skipped: rows.length - added, untagged, lookingUp });
   });
 
-  // ----- The graph: tag weights and cross-app patterns -----
-  r.get('/graph', requireUser, (req, res) => {
-    const saves = interpret(getSaves(req.user.id));
+  // ----- You: your Tastemate character, your perfect day, your taste twin -----
+  r.get('/you', requireUser, (req, res) => {
+    const me = req.user.id;
+    const cache = loadCreatorCache(db);
+    const saves = interpret(getSaves(me), { cache });
     const profile = tasteProfile(saves);
-    const savedCities = {};
-    for (const s of saves) if (s.city) savedCities[s.city] = (savedCities[s.city] || 0) + 1;
-    const possible = saves.reduce((n, s) => n + s.signals.filter((x) => x.tier === 'possible').length, 0);
-    const patterns = findPatterns(saves);
-    res.json({ tags: topSaveTags(profile), patterns, web: tasteWeb(saves, patterns, profile), character: tasteCharacter(saves, patterns, profile), total: saves.length, untagged: saves.filter((s) => !s.tags.length).length, possible, cities: savedCities });
+    const clusters = findPatterns(saves);
+    const city = homeCity(me);
+    const dismissed = new Set(db.prepare('SELECT spot_id FROM spot_dismissals WHERE user_id = ?').all(me).map((x) => x.spot_id));
+    const day = city && saves.length ? perfectDay({ profile, saves, spots: visibleSpots(me), city, exclude: dismissed }) : [];
+
+    // Your taste twin: the friend whose saves read most like yours, and what you share.
+    let twin = null;
+    for (const id of friendIds(db, me)) {
+      const theirs = tasteProfile(interpret(getSaves(id), { cache }));
+      const match = toPercent(Math.max(0, cosine(profile, theirs)));
+      if (!twin || match > twin.match) {
+        const top = (p) => new Set([...p.entries()].filter(([k, v]) => v > 0 && !k.startsWith('creator:')).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k]) => k));
+        const mine = top(profile);
+        const u = db.prepare('SELECT username, display_name FROM users WHERE id = ?').get(id);
+        twin = { ...u, match, shared: [...top(theirs)].filter((t) => mine.has(t)).slice(0, 3) };
+      }
+    }
+    res.json({
+      character: tasteCharacter(saves, clusters, profile),
+      day,
+      city,
+      twin,
+      total: saves.length,
+      untagged: saves.filter((s) => !s.tags.length).length,
+      lookingUp: enricher.pending(),
+    });
   });
 
   // ----- Next: what to do, see and buy in a city, for a date range -----
@@ -113,7 +144,7 @@ export default function savesRoutes(r, { db, venueFeed }) {
     const to = ISO_DATE.test(req.query.to) ? req.query.to : addDays(from, 14);
     if (to < from) throw new HttpError(400, 'The end date is before the start date');
 
-    const saves = interpret(getSaves(me));
+    const saves = readSaves(me);
     const profile = tasteProfile(saves);
     const spots = visibleSpots(me);
     const savedSpots = new Set(saves.filter((s) => s.spot_id).map((s) => s.spot_id));
@@ -128,8 +159,23 @@ export default function savesRoutes(r, { db, venueFeed }) {
       for (const x of rows) friendSaves.set(x.spot_id, [...(friendSaves.get(x.spot_id) || []), x.display_name]);
     }
 
-    const ranked = rankSpots({ profile, saves, spots, city, from, to, friendSaves, exclude: new Set([...savedSpots, ...dismissed]), today });
+    const exclude = new Set([...savedSpots, ...dismissed]);
+    const ranked = rankSpots({ profile, saves, spots, city, from, to, friendSaves, exclude, today });
     const group = (kind) => ranked.filter((x) => x.spot.kind === kind).slice(0, PER_KIND[kind]);
+    const shown = new Set(['event', 'place', 'product'].flatMap((k) => group(k).map((x) => x.spot.id)));
+
+    // Something a little different: spots for the tastes your saves hint at
+    // but you haven't explored, so Next widens your world as well as matching it.
+    const character = tasteCharacter(saves, findPatterns(saves), profile);
+    const stretchTags = character?.stretch || [];
+    const stretch = stretchTags.length
+      ? rankSpots({ profile: new Map(stretchTags.map((t) => [t, 1])), saves, spots, city, from, to, exclude: new Set([...exclude, ...shown]), today })
+          .slice(0, 4)
+          .map((x) => {
+            const tags = stretchTags.filter((t) => x.spot.tags.includes(t));
+            return { ...x, reasons: [{ type: 'stretch', tags, why: tags.map((t) => character.stretchWhy[t]).filter(Boolean)[0] || null }, ...x.reasons.filter((r) => r.type !== 'saves' && r.type !== 'tags')] };
+          })
+      : [];
     res.json({
       city,
       homeCity: homeCity(me),
@@ -139,6 +185,7 @@ export default function savesRoutes(r, { db, venueFeed }) {
       events: group('event'),
       places: group('place'),
       products: group('product'),
+      stretch,
       // What you already saved there and may have forgotten about.
       canRefreshPosts: !!venueFeed,
       yourSaves: city ? saves.filter((s) => s.city?.toLowerCase() === city.toLowerCase() && !s.spot_id).map(({ signals, ...s }) => s) : [],
@@ -215,7 +262,7 @@ export default function savesRoutes(r, { db, venueFeed }) {
   // ----- Occasions: a whole evening from your taste -----
   r.get('/occasion', requireUser, (req, res) => {
     const me = req.user.id;
-    const saves = interpret(getSaves(me));
+    const saves = readSaves(me);
     const profile = tasteProfile(saves);
     const city = homeCity(me);
     const shop = visibleSpots(me).filter((x) => x.kind !== 'event' && (!x.city || !city || x.city.toLowerCase() === city.toLowerCase()));
@@ -253,6 +300,16 @@ export default function savesRoutes(r, { db, venueFeed }) {
     db.prepare('UPDATE users SET home_city = ? WHERE id = ?').run(home, req.user.id);
     res.json({ home_city: home });
   });
+}
+
+/** Signals grouped by facet, firm ones first: { sound: [{ tag, tier, via }], place: [...] }. */
+function breakdown(signals) {
+  const rank = { obvious: 0, translated: 1, possible: 2 };
+  const out = {};
+  for (const x of [...signals].sort((a, b) => rank[a.tier] - rank[b.tier])) {
+    (out[x.facet] ||= []).push({ tag: x.tag, tier: x.tier, via: x.via });
+  }
+  return out;
 }
 
 function cleanUrl(u) {

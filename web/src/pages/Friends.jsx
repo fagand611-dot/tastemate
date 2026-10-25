@@ -27,7 +27,7 @@ export default function Friends() {
 
   return (
     <>
-      <PageHead title="Friends" intro="When a friend saves a spot, it shows up in your Next with their name on it." />
+      <PageHead title="Your people" intro="See whose taste is closest to yours. When a friend saves a spot, it turns up in your Next with their name on it." />
       {msg && <p className="notice">{msg}</p>}
       <form className="searchbar" onSubmit={request}>
         <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Add a friend by username" aria-label="Username" />
@@ -53,7 +53,7 @@ export default function Friends() {
                 </ul>
               </>
             )}
-            <h2>Your friends</h2>
+            <h2>Taste twins, closest first</h2>
             {friends.length ? (
               <ul className="people">
                 {friends.map((u) => (

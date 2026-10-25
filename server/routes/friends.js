@@ -1,12 +1,13 @@
 import { HttpError, intParam } from '../http.js';
 import { requireUser } from '../auth.js';
 import { friendIds, hydrateSave } from '../db.js';
-import { cosine, tasteProfile, toPercent } from '../taste-graph.js';
+import { cosine, interpret, tasteProfile, toPercent } from '../taste-graph.js';
+import { loadCreatorCache } from '../enrich.js';
 
 // Friends are mutual and need an accept. They matter to the taste graph:
 // a spot a friend saved shows up in Next with "Maya saved it".
 export default function friendRoutes(r, { db }) {
-  const profileOf = (userId) => tasteProfile(db.prepare('SELECT * FROM saves WHERE user_id = ?').all(userId).map(hydrateSave));
+  const profileOf = (userId) => tasteProfile(interpret(db.prepare('SELECT * FROM saves WHERE user_id = ?').all(userId).map(hydrateSave), { cache: loadCreatorCache(db) }));
 
   r.get('/friends', requireUser, (req, res) => {
     const me = req.user.id;

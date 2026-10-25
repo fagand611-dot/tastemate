@@ -8,16 +8,16 @@ import { useApi } from '../components/ui.jsx';
 import { useTheme } from '../theme.js';
 
 const LINKS = [
-  ['/saves', 'Saves', 'graph', 'Everything you saved, and your taste clusters'],
-  ['/next', 'Next', 'pin', 'Events, places and things to buy'],
-  ['/host', 'Host', 'sparkle', 'Plan an evening from your taste'],
-  ['/friends', 'Friends', 'users', 'Requests and taste matches'],
+  ['/you', 'You', 'sparkle', 'Your Tastemate character, and your saves'],
+  ['/next', 'Next', 'pin', 'Where to go, what to see, what to buy'],
+  ['/host', 'Host', 'cup', 'Set the mood for tonight'],
+  ['/friends', 'Friends', 'users', 'Your people and taste twins'],
 ];
 
 // Account hub: the phone's "Me" tab, and the avatar menu on desktop.
 export default function Me() {
   const { user, logout, refresh } = useAuth();
-  const graph = useApi('/graph');
+  const you = useApi('/you');
   const friends = useApi('/friends');
   const [theme, setTheme] = useTheme();
   const [city, setCity] = useState(user.home_city || '');
@@ -41,9 +41,9 @@ export default function Me() {
       </div>
 
       <div className="stat-row">
-        <div className="stat"><b>{graph.data?.total ?? '–'}</b><span>saves</span></div>
+        <div className="stat"><b>{you.data?.total ?? '–'}</b><span>saves</span></div>
         <div className="stat"><b>{friends.data?.friends.length ?? '–'}</b><span>friends</span></div>
-        <div className="stat"><b>{graph.data?.tags[0]?.tag ?? '–'}</b><span>top taste</span></div>
+        <div className="stat"><b>{you.data?.character?.sides[0]?.key ?? '–'}</b><span>top side</span></div>
       </div>
 
       {friends.data?.incoming.length > 0 && (
@@ -64,7 +64,7 @@ export default function Me() {
 
       <form className="card-plain" onSubmit={saveCity}>
         <span className="label">Home city</span>
-        <p className="muted small">Next and Host use it when you don’t pick a city.</p>
+        <p className="muted small">Your perfect day, Next and Host use it when you don’t pick a city.</p>
         <div className="row">
           <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g. Dublin" aria-label="Home city" style={{ flex: 1 }} />
           <button className="btn btn-sm btn-outline">Save</button>

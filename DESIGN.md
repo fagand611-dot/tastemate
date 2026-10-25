@@ -35,8 +35,9 @@ generic recommendations, which is why import and interpretation come first.
 ## 3. Core journeys
 
 1. **Import.** Upload each app's data export, or paste lines. Re-importing is safe.
-2. **See your taste.** Clusters across apps, each with its evidence. Retag
-   anything the reading got wrong.
+2. **Meet your Tastemate.** The You tab comes first: your character, dials,
+   sides with proof, a perfect day in your city, stretch tastes and your taste
+   twin. Your raw saves stay in a drawer, each shown as its parts, retaggable.
 3. **Tomorrow, at home.** Next for your home city, *Tomorrow*: small,
    matching events first, explained in your own saves.
 4. **A trip.** Next for Bangkok with trip dates: your own Bangkok saves
@@ -59,7 +60,20 @@ A keyword match alone isn't taste. Tastemate reads each save as a whole
 | **Translated** | It means it without saying it | "listening bar" → jazz; Miles Davis → jazz; "@croissantdiaries" contains "croissant" → pastry; "concrete" → architecture | 0.7 |
 | **Could be** | It goes with it, or your habits say so | vinyl *often goes with* jazz; *most of your intimate saves are also jazz* | 0.4 × strength, or 0.35 × P(B given A) |
 
-- **Translation** uses keyword rules over a shared vocabulary, known artists
+- **Facets.** Every signal belongs to a facet (`facetOf`): **sound**,
+  **vibe**, **place**, **era** or **thing**, plus the **artist** itself. One
+  save breaks down into several: "Dive — Olivia Dean" → neo-soul, soul, pop
+  · warm, uplifting, romantic · London · 2020s. The city a save was made in
+  counts as a place too.
+- **Artist facts** come from a built-in list (`server/creators.js`) and,
+  for anyone else, from MusicBrainz (`providers/musicbrainz.js`): where
+  they're from, sounds from community tags (kept only when they're sounds
+  we know), and a band's formation decade (never a person's birth year).
+  Lookups run in the background at MusicBrainz's pace of one a second
+  (`server/enrich.js`), every answer is cached in `creator_facts` (including
+  "no match", so it isn't asked again), and the saves that mention the
+  artist get the new tags added, keeping the person's own edits.
+- **Translation** uses keyword rules over a shared vocabulary, artist facts
   (including "Duke Ellington & John Coltrane" → both), run-together handles
   (only inside things that look like handles, so "candlelit" isn't "candle"),
   and music genres, which carry their moods (jazz is also *chill* and
@@ -77,24 +91,41 @@ if at least two saves firmly support it and its saves span more than one
 kind of thing or more than one app. Each cluster lists its evidence by tier,
 so the UI can say *why jazz*.
 
-### Your Tastemate character and the taste universe
+### Your Tastemate character
 
-The graph is shown to people as a character, not a chart (`tasteCharacter`,
-`tasteWeb`). The **name** comes from the strongest tag with an archetype
-("jazz" → *The Late-Night Listener*), the **tagline** from the next strongest
-outside that side ("with a candlelit streak"). **Sides** are the top three
-clusters with their share of saves. **Stretch** tastes are the strongest
-could-be signals the person rarely says outright, leaving out pure moods:
-the things to broaden into.
+People don't come back to a list of their own tags; they come back to a
+character, the way personality tests work. So the graph is shown only as a
+character (`tasteCharacter`), never as a chart:
 
-The **taste universe** draws tags as bubbles (size = strength), coloured and
-haloed by side, joined by curved lines weighted by how often they're saved
-together (could-be signals count less). Side colours are three categorical
-slots validated as a set for colour-blind separation on both themes; text
-stays in text colours and every bubble is labelled, so colour is never the
-only cue. The same data is available as a cloud and as a plain list. **Why?**
-on a pick in Next is a flow: apps → shared tastes → the pick's match ring,
-with friends and other signals as grey streams and hints dashed.
+- **Name and tagline.** The name comes from the strongest tag with an
+  archetype, preferring something specific over a mood ("jazz" → *The
+  Late-Night Listener*); the tagline from your next side ("with a
+  candlelit streak"). A one-line **description** strings together phrases
+  for your top tastes ("low-lit rooms, records with a story and slow
+  evenings").
+- **Five dials** (`vibeDials`), each a ratio between opposites read from
+  your tastes and saves: early bird ↔ night owl, homebody ↔ out and about
+  (kinds of saves), classic ↔ fresh (eras), calm ↔ lively, local ↔ wanderer
+  (how many places you save in). A dial with nothing to go on is left out.
+- **Sides** are the top three clusters, each with its own name ("your
+  jazz-bar soul") and up to three saves of different kinds as proof, broken
+  down into facet chips. A save proves only one side.
+- **Your perfect day** (`perfectDay`): the best-matching spot in your home
+  city for the morning (cafés, bakeries, markets), the afternoon (galleries,
+  shops, craft) and the evening (bars, gigs, events in the next week), three
+  different places.
+- **Stretch** tastes are the strongest could-be signals you rarely say
+  outright, only sounds and things (never moods, places or eras): the
+  things to broaden into. Next turns them into *Something a little different*.
+- **Taste twin:** the friend whose profile is closest, and what you share.
+
+It's drawn as a playful card with a cartoon emblem (`TasteArt`), sticker-
+style side cards and dial knobs. Side colours are three categorical slots
+validated as a set for colour-blind separation on both themes, and text
+always stays in text colours. **Why?** on a pick in Next is the one
+explanatory picture: streams from your apps, through the tastes they share,
+pouring into the pick's match ring, with friends and extras in grey and
+hints dashed.
 
 ## 5. Taste → action
 
@@ -149,6 +180,7 @@ spots(id, kind[event|place|product], title, city, venue, creators[], tags[], des
       starts_at, ends_at, opened_at, price, url, popularity 0..1, source, external_id,
       is_demo, added_by?)
 spot_dismissals(user_id, spot_id)
+creator_facts(name, facts?, fetched_at)            -- MusicBrainz answers, null = no match
 ```
 
 Signals aren't stored: they're computed from saves on each read, so better
@@ -166,7 +198,8 @@ rules apply to old saves immediately. Saving a spot creates a save
 | Events from venue posts | **Feasible with official APIs.** Instagram Business Discovery reads public posts of business and creator accounts (venues almost always are). Facebook Pages need Page Public Content Access, which requires Meta's app review. | Scraping breaks Meta's terms; don't. Captions are messy, so the parser drafts and a person confirms, or the feed only keeps posts with a clear date, city and tags. |
 | Wider event and venue coverage | **The hard part.** The demo uses sample data. | Combine listings and ticketing sources (Eventbrite, Resident Advisor, Dice, local guides) and venue data (Google Places, Foursquare). The long tail needs the post path above and people sharing. |
 | Products | **Feasible with affiliate and retailer feeds**, including stock and sale data where shared. | Affiliate revenue is the obvious business model. |
-| Interpretation quality | Rules and associations in v1. | Next: text and image embeddings, or an LLM that maps a save (caption, image) into the shared vocabulary with a tier. Scoring stays the same. |
+| Artist facts | **Feasible.** Built-in list plus MusicBrainz (free, no key, one request a second), cached. | Community tags are uneven, so only known sounds are kept. Spotify's artist genres and Last.fm tags would add more; an LLM could add vibe words. |
+| Interpretation quality | Rules, associations and artist facts in v1. | Next: text and image embeddings, or an LLM that maps a save (caption, image) into the shared vocabulary with a tier. Scoring stays the same. |
 | Privacy | Saves are private. Friends see only spots you saved or added. | Import just the saves files from an export; never ask for passwords to other apps. |
 
 ## 8. Architecture

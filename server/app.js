@@ -5,11 +5,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadUser } from './auth.js';
 import { createVenuePosts } from './providers/venue-posts.js';
+import { createArtistLookup } from './providers/musicbrainz.js';
+import { createEnricher } from './enrich.js';
 import authRoutes from './routes/auth.js';
 import savesRoutes from './routes/saves.js';
 import friendRoutes from './routes/friends.js';
 
-export function createApp({ db, venueFeed = createVenuePosts() }) {
+export function createApp({ db, venueFeed = createVenuePosts(), artistLookup = createArtistLookup() }) {
   const app = express();
   app.disable('x-powered-by');
   // Export files from other apps can be large; everything else stays small.
@@ -18,7 +20,9 @@ export function createApp({ db, venueFeed = createVenuePosts() }) {
   app.use(cookieParser());
   app.use(loadUser(db));
 
-  const ctx = { db, venueFeed };
+  const enricher = createEnricher(db, artistLookup);
+  app.locals.enricher = enricher;
+  const ctx = { db, venueFeed, enricher };
   const api = express.Router();
   authRoutes(api, ctx);
   friendRoutes(api, ctx);

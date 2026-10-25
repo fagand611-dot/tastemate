@@ -6,7 +6,7 @@ import { ActionsProvider } from './components/actions.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import Login from './pages/Login.jsx';
 import Next from './pages/Next.jsx';
-import Saves from './pages/Saves.jsx';
+import You from './pages/You.jsx';
 import Host from './pages/Host.jsx';
 import Friends from './pages/Friends.jsx';
 import Me from './pages/Me.jsx';
@@ -16,19 +16,19 @@ export const useAuth = () => useContext(AuthCtx);
 
 // Desktop top navigation.
 const NAV = [
+  ['/you', 'You'],
   ['/next', 'Next'],
-  ['/saves', 'Saves'],
   ['/host', 'Host'],
   ['/friends', 'Friends'],
 ];
 
-// Phone bottom tabs.
+// Phone bottom tabs. You come first: meet your character, then go out.
 const TABS = [
+  ['/you', 'You', 'sparkle'],
   ['/next', 'Next', 'pin'],
-  ['/saves', 'Saves', 'graph'],
-  ['/host', 'Host', 'sparkle'],
+  ['/host', 'Host', 'cup'],
   ['/friends', 'Friends', 'users'],
-  ['/me', 'Me', 'user'],
+  ['/me', 'Account', 'user'],
 ];
 
 export default function App() {
@@ -96,9 +96,10 @@ export default function App() {
         <main>
           <ErrorBoundary key={pathname}>
           <Routes>
-            <Route path="/" element={<Navigate to="/next" replace />} />
+            <Route path="/" element={<Navigate to="/you" replace />} />
+            <Route path="/you" element={<You />} />
+            <Route path="/saves" element={<Navigate to="/you" replace />} />
             <Route path="/next" element={<Next />} />
-            <Route path="/saves" element={<Saves />} />
             <Route path="/host" element={<Host />} />
             <Route path="/friends" element={<Friends />} />
             <Route path="/me" element={<Me />} />

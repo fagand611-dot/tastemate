@@ -1,3 +1,5 @@
+import { CREATORS, SOUND_PARENTS, creatorFacts } from './creators.js';
+
 // The shared tag vocabulary. Every save, spot and idea is described in
 // these words (jazz, intimate, pastry, tailoring…), which is what lets a
 // jazz playlist point at a wine bar.
@@ -188,30 +190,6 @@ export const VIBE_KEYWORDS = {
   orchestra: ['classical', 'epic'],
 };
 
-// Artists whose genre isn't in their song titles. The catalogue fills in
-// more at import time; this covers well-known names it may not have.
-export const KNOWN_CREATORS = {
-  'miles davis': ['jazz'],
-  'john coltrane': ['jazz'],
-  'bill evans': ['jazz'],
-  'duke ellington': ['jazz'],
-  'thelonious monk': ['jazz'],
-  'chet baker': ['jazz', 'romantic'],
-  'dave brubeck': ['jazz'],
-  'the dave brubeck quartet': ['jazz'],
-  'nina simone': ['jazz', 'soul'],
-  'herbie hancock': ['jazz'],
-  'kamasi washington': ['jazz', 'epic'],
-  'norah jones': ['jazz', 'chill'],
-  'nick drake': ['folk'],
-  'massive attack': ['electronic', 'moody', 'dark'],
-  portishead: ['electronic', 'moody', 'dark'],
-  'daft punk': ['house'],
-  'rhythim is rhythim': ['techno'],
-  'frankie knuckles': ['house'],
-  'max richter': ['classical', 'atmospheric'],
-};
-
 // Indirect links between tags: things that often go with a taste without
 // naming it. A vinyl habit could be jazz; a speakeasy could be too. These
 // are "could be" signals, weighted well below what a save says outright.
@@ -259,20 +237,41 @@ const HANDLE_WORDS = Object.entries(VIBE_KEYWORDS)
   .filter(([k]) => k.length >= 5 && /^[a-z -]+$/.test(k))
   .map(([k, tags]) => [k.replace(/[ -]/g, ''), tags]);
 
+// Every signal belongs to a facet, so one save breaks down into who, how it
+// sounds, how it feels, where and when.
+export const FACETS = ['artist', 'sound', 'vibe', 'place', 'era', 'thing'];
+const VIBES = new Set(['dark', 'tense', 'cerebral', 'emotional', 'uplifting', 'funny', 'romantic', 'atmospheric', 'high-energy', 'chill', 'epic', 'weird', 'nostalgic', 'gritty', 'moody', 'intimate', 'cozy', 'lively', 'warm', 'minimal', 'vintage', 'luxe', 'classic', 'hidden gem']);
+const SOUNDS = new Set([...MUSIC_GENRES, ...Object.keys(SOUND_PARENTS), 'poetry']);
+const PLACES = new Set([
+  ...Object.values(CREATORS).map((c) => c.from.toLowerCase()),
+  'bangkok', 'london', 'dublin', 'tokyo', 'paris', 'new york', 'berlin', 'lisbon', 'barcelona', 'amsterdam', 'copenhagen', 'seoul', 'mexico city',
+]);
+
+/** Which facet a tag belongs to. */
+export function facetOf(tag) {
+  if (/^\d{4}s$/.test(tag)) return 'era';
+  if (PLACES.has(tag)) return 'place';
+  if (SOUNDS.has(tag)) return 'sound';
+  if (VIBES.has(tag)) return 'vibe';
+  return 'thing';
+}
+
 /**
- * Read a save's text and say what it signals, and how directly:
+ * Read a save as a whole and say what it signals, and how directly:
  *   obvious     the tag's own word is there ("jazz", or a music genre)
- *   translated  something that means it ("listening bar", "Miles Davis",
- *               "@croissantdiaries" → pastry)
- * Returns [{ tag, tier, via }], strongest tier per tag. "Could be" signals
- * come later, from associations and the user's own patterns (taste-graph.js).
+ *   translated  something that means it ("listening bar", "@croissantdiaries"
+ *               → pastry), or a fact about the artist (Olivia Dean → neo-soul,
+ *               London, 2020s)
+ * Returns [{ tag, tier, via, facet }], strongest tier per tag. "Could be"
+ * signals come later, from associations and the user's own patterns
+ * (taste-graph.js). `cache` holds artists looked up on MusicBrainz.
  */
-export function readSignals({ title, creator, collection, note } = {}) {
+export function readSignals({ title, creator, collection, note } = {}, cache = null) {
   const s = [title, creator, collection, note].filter(Boolean).join(' · ');
   const out = new Map();
-  const put = (tag, tier, via) => {
+  const put = (tag, tier, via, facet = facetOf(tag)) => {
     const prev = out.get(tag);
-    if (!prev || (prev.tier === 'translated' && tier === 'obvious')) out.set(tag, { tag, tier, via });
+    if (!prev || (prev.tier === 'translated' && tier === 'obvious')) out.set(tag, { tag, tier, via, facet });
   };
   if (!s) return [];
   for (const [re, k, tags] of KEYWORD_RES) {
@@ -296,19 +295,31 @@ export function readSignals({ title, creator, collection, note } = {}) {
     put(g, 'obvious', g);
     for (const m of moodsForGenres([g])) put(m, 'translated', `${g} is ${m}`);
   }
-  // "Duke Ellington & John Coltrane" counts for both.
-  for (const name of creator ? creator.split(/\s*(?:&|,| and | feat\.? )\s*/i) : []) {
-    for (const t of KNOWN_CREATORS[name.toLowerCase()] || []) {
-      put(t, 'translated', `${name} → ${t}`);
-      for (const m of moodsForGenres([t])) put(m, 'translated', `${t} is ${m}`);
+  // What we know about the artist. "Duke Ellington & John Coltrane" counts for both.
+  for (const name of splitCreators(creator)) {
+    const f = creatorFacts(name, cache);
+    if (!f) continue;
+    for (const sound of f.sounds || []) {
+      put(sound, 'translated', `${name} makes ${sound}`, 'sound');
+      const parent = SOUND_PARENTS[sound];
+      if (parent) put(parent, 'translated', `${sound} is ${parent}`, 'sound');
+      for (const m of moodsForGenres([parent || sound])) put(m, 'translated', `${parent || sound} is ${m}`, 'vibe');
     }
+    for (const m of f.moods || []) put(m, 'translated', `${name} feels ${m}`, 'vibe');
+    if (f.from) put(f.from.toLowerCase(), 'translated', `${name} is from ${f.from}`, 'place');
+    if (f.era) put(f.era, 'translated', `${name} came up in the ${f.era}`, 'era');
   }
   return [...out.values()];
 }
 
-/** Tags implied by free text (title, note, collection name…). */
-export function autoTag(title, creator, collection, note) {
-  return readSignals({ title, creator, collection, note }).map((x) => x.tag);
+/** Tags implied by a save (title, artist, collection name, note). */
+export function autoTag(title, creator, collection, note, cache = null) {
+  return readSignals({ title, creator, collection, note }, cache).map((x) => x.tag);
+}
+
+/** "Duke Ellington & John Coltrane" → both names. */
+export function splitCreators(creator) {
+  return creator ? creator.split(/\s*(?:&|,| and | feat\.? | ft\.? | x )\s*/i).map((x) => x.trim()).filter(Boolean) : [];
 }
 
 /** Best-guess kind for a save from its tags, or `fallback`. */

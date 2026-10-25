@@ -5,7 +5,7 @@
 //
 // Pure functions: routes load rows, this scores them.
 // See DESIGN.md §4.
-import { ASSOCIATIONS, readSignals } from './taxonomy.js';
+import { ASSOCIATIONS, facetOf, readSignals } from './taxonomy.js';
 
 export const SPOT_BLEND = { content: 0.6, social: 0.2, fresh: 0.1, gem: 0.1 };
 // How much each kind of signal counts.
@@ -30,15 +30,19 @@ const GEM_POPULARITY = 0.35;
  * Possible signals only count for a fraction, so they shape a cluster
  * without inventing one.
  */
-export function interpret(saves) {
+export function interpret(saves, { cache = null } = {}) {
   const base = saves.map((s) => {
-    const read = new Map(readSignals(s).map((x) => [x.tag, x]));
-    return (s.tags || []).map((tag) => {
+    const read = new Map(readSignals(s, cache).map((x) => [x.tag, x]));
+    const sig = (s.tags || []).map((tag) => {
       const r = read.get(tag);
       // Tags the text doesn't explain came from you or a curated spot: take them at face value.
       const tier = r?.tier === 'translated' && s.source !== 'tastemate' ? 'translated' : 'obvious';
-      return { tag, tier, conf: TIER_CONF[tier], via: r && r.via !== tag ? r.via : null };
+      return { tag, tier, conf: TIER_CONF[tier], via: r && r.via !== tag ? r.via : null, facet: r?.facet || facetOf(tag) };
     });
+    // Where it was saved is part of the taste too ("London", "Bangkok").
+    const city = s.city?.trim().toLowerCase();
+    if (city && !sig.some((x) => x.tag === city)) sig.push({ tag: city, tier: 'obvious', conf: TIER_CONF.obvious, via: `saved in ${s.city}`, facet: 'place' });
+    return sig;
   });
 
   // Your own habits: P(B | A) over your saves, for tags you use often.
@@ -63,7 +67,7 @@ export function interpret(saves) {
     const maybe = new Map();
     const offer = (tag, conf, via) => {
       if (have.has(tag) || conf < MIN_POSSIBLE) return;
-      if (!maybe.has(tag) || maybe.get(tag).conf < conf) maybe.set(tag, { tag, tier: 'possible', conf: +conf.toFixed(3), via });
+      if (!maybe.has(tag) || maybe.get(tag).conf < conf) maybe.set(tag, { tag, tier: 'possible', conf: +conf.toFixed(3), via, facet: facetOf(tag) });
     };
     for (const { tag } of base[i]) {
       for (const [t, w] of ASSOCIATIONS[tag] || []) offer(t, ASSOC_CONF * w, `${tag} often goes with ${t}`);
@@ -185,75 +189,8 @@ export function findPatterns(saves, { max = 5, minSaves = 3 } = {}) {
   return out;
 }
 
-/**
- * The taste web: your strongest tags as nodes, joined where they show up in
- * the same saves, each placed in the cluster it belongs to. Edge weight is
- * the summed confidence of the pair (a could-be signal counts for less).
- * Each node carries the saves behind it, firm signals first.
- */
-export function tasteWeb(saves, clusters, profile, { maxNodes = 28, maxEdges = 60, minEdge = 0.7 } = {}) {
-  const all = ensure(saves);
-  const top = topSaveTags(profile, maxNodes);
-  const keep = new Set(top.map((t) => t.tag));
-  const pair = new Map();
-  const behind = new Map();
-  for (const s of all) {
-    const sig = s.signals.filter((x) => keep.has(x.tag));
-    for (const x of sig) {
-      if (!behind.has(x.tag)) behind.set(x.tag, []);
-      behind.get(x.tag).push({ id: s.id, title: s.title, kind: s.kind, source: s.source, tier: x.tier, via: x.via });
-    }
-    for (let i = 0; i < sig.length; i++) {
-      for (let j = i + 1; j < sig.length; j++) {
-        const [a, b] = [sig[i].tag, sig[j].tag].sort();
-        const key = `${a}|${b}`;
-        pair.set(key, (pair.get(key) || 0) + Math.min(sig[i].conf, sig[j].conf));
-      }
-    }
-  }
-  const edges = [...pair.entries()]
-    .filter(([, w]) => w >= minEdge)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, maxEdges)
-    .map(([key, w]) => {
-      const [a, b] = key.split('|');
-      return { a, b, w: +w.toFixed(2) };
-    });
-  const weightBetween = (a, b) => pair.get([a, b].sort().join('|')) || 0;
-  // A tag belongs to the first cluster that names it, else to the cluster
-  // whose seed it goes with most, else to none ("other tastes").
-  const clusterOf = (tag) => {
-    const named = clusters.findIndex((c) => c.tags.includes(tag));
-    if (named >= 0) return named;
-    let best = null;
-    let bestW = 1;
-    clusters.forEach((c, i) => {
-      const w = weightBetween(tag, c.tags[0]);
-      if (w >= bestW) [best, bestW] = [i, w];
-    });
-    return best;
-  };
-  const tierRank = { obvious: 0, translated: 1, possible: 2 };
-  const nodes = top.map(({ tag, weight }) => {
-    const list = (behind.get(tag) || []).sort((x, y) => tierRank[x.tier] - tierRank[y.tier]);
-    return {
-      id: tag,
-      weight,
-      cluster: clusterOf(tag),
-      firm: list.filter((x) => x.tier !== 'possible').length,
-      maybe: list.filter((x) => x.tier === 'possible').length,
-      saves: list.slice(0, 8),
-    };
-  });
-  return { nodes, edges, clusters: clusters.map((c, i) => ({ index: i, tags: c.tags })) };
-}
-
-// Moods and qualities: they describe a taste but aren't something to go and
-// try, so they never count as a stretch.
-const VIBE_WORDS = new Set(['chill', 'cerebral', 'moody', 'dark', 'atmospheric', 'intimate', 'romantic', 'lively', 'high-energy', 'uplifting', 'emotional', 'classic', 'cozy', 'vintage', 'minimal', 'epic', 'nostalgic', 'gritty', 'weird', 'luxe', 'food', 'tense', 'funny', 'hidden gem']);
-
-// Who a tag makes you: [archetype, the "side" it adds]. Checked in order of
-// your strongest tags, so the most specific match wins.
+// Who a tag makes you: [archetype, the "side" it adds]. Something specific
+// (jazz, pastry) names you before a mood does.
 const ARCHETYPES = {
   jazz: ['Late-Night Listener', 'a jazz-bar soul'],
   vinyl: ['Crate Digger', 'a record-shop streak'],
@@ -279,42 +216,157 @@ const ARCHETYPES = {
   outdoors: ['Trail Seeker', 'an outdoors itch'],
   cozy: ['Cosy-Corner Dweller', 'a cosy side'],
   photography: ['Golden-Hour Chaser', 'a photographer’s eye'],
+  soul: ['Soul Searcher', 'a soft spot for soul'],
+  'neo-soul': ['Neo-Soul Dreamer', 'a neo-soul glow'],
+  classical: ['Concert-Hall Dreamer', 'a strings-and-piano side'],
+  electronic: ['After-Hours Wanderer', 'an after-hours side'],
+  // Moods: used for sides, and for the name only when nothing more specific stands out.
+  intimate: ['Small-Room Regular', 'a small-rooms-only rule'],
+  chill: ['Slow-Evening Specialist', 'a slow-evening side'],
+  cerebral: ['Deep Thinker', 'a deep-thinker side'],
+  atmospheric: ['Atmosphere Hunter', 'an atmosphere-hunter side'],
+  dark: ['After-Dark Explorer', 'an after-dark side'],
+  romantic: ['Hopeless Romantic', 'a hopeless-romantic side'],
+  emotional: ['Big Feeler', 'a big-feelings side'],
+  warm: ['Warm Soul', 'a warm glow'],
+  'high-energy': ['Live Wire', 'a live-wire side'],
+  lively: ['Life of the Party', 'a party side'],
+  uplifting: ['Sunshine Seeker', 'a sunny side'],
 };
 
+// What a taste says about you, for the one-line description:
+// "You're drawn to records with a story, low-lit rooms and slow coffee."
+const PHRASES = {
+  jazz: 'records with a story', vinyl: 'the crackle of vinyl', soul: 'warm voices', 'neo-soul': 'warm, easy grooves',
+  moody: 'low-lit rooms', intimate: 'small rooms', romantic: 'candlelight', dark: 'after-dark places', atmospheric: 'places with atmosphere',
+  minimal: 'clean lines', cozy: 'corners you can sink into', vintage: 'second-hand finds', 'dark academia': 'old libraries',
+  pastry: 'a really good croissant', coffee: 'slow coffee', 'wine bar': 'natural wine', cocktails: 'hidden bars', food: 'a long table',
+  art: 'quiet galleries', architecture: 'bold buildings', craft: 'hand-made things', design: 'good design', photography: 'golden-hour light',
+  books: 'bookshops', house: 'a good dancefloor', techno: 'warehouse nights', comedy: 'a good laugh', folk: 'songs by the fire',
+  tailoring: 'a sharp coat', 'street food': 'night markets', outdoors: 'a long walk', 'live music': 'a gig in a small room',
+  classical: 'strings and piano', electronic: 'late electronic sets', 'trip-hop': 'smoky beats', chill: 'slow evenings', warm: 'warmth',
+};
+
+// The five dials: pairs of opposites, each read from your tastes.
+const NIGHT = ['moody', 'dark', 'jazz', 'cocktails', 'techno', 'house', 'intimate', 'wine bar', 'live music', 'comedy'];
+const DAY = ['coffee', 'pastry', 'outdoors', 'market', 'uplifting', 'books', 'craft', 'art'];
+const CALM = ['chill', 'intimate', 'minimal', 'atmospheric', 'cozy', 'ambient', 'folk', 'books'];
+const LIVELY = ['lively', 'high-energy', 'house', 'techno', 'street food', 'comedy', 'live music', 'rooftop'];
+const OUT_KINDS = new Set(['place', 'event', 'food']);
+
+function dialLabel(v, [left, right]) {
+  if (v >= 0.72) return `Proper ${right.toLowerCase()}`;
+  if (v >= 0.56) return `Leans ${right.toLowerCase()}`;
+  if (v > 0.44) return 'Bit of both';
+  if (v > 0.28) return `Leans ${left.toLowerCase()}`;
+  return `Proper ${left.toLowerCase()}`;
+}
+
+/** Your vibe as dials between opposites, 0 (left) … 1 (right). Dials with nothing to go on are left out. */
+export function vibeDials(saves, profile) {
+  const w = (tags) => tags.reduce((a, t) => a + Math.max(0, profile.get(t) || 0), 0);
+  const ratio = (l, r) => (l + r > 0.3 ? r / (l + r) : null);
+  const eras = saves.flatMap((s) => s.signals.filter((x) => x.facet === 'era').map((x) => Number(x.tag.slice(0, 4))));
+  const places = new Set(saves.flatMap((s) => s.signals.filter((x) => x.facet === 'place' && x.tier !== 'possible').map((x) => x.tag)));
+  const out = saves.filter((s) => OUT_KINDS.has(s.kind)).length;
+  const old = eras.filter((y) => y < 2000).length + w(['vintage', 'classic']);
+  const fresh = eras.filter((y) => y >= 2010).length;
+  const dials = [
+    { left: 'Early bird', right: 'Night owl', value: ratio(w(DAY), w(NIGHT)) },
+    { left: 'Homebody', right: 'Out and about', value: ratio(saves.length - out, out) },
+    { left: 'Classic', right: 'Fresh', value: ratio(old, fresh) },
+    { left: 'Calm', right: 'Lively', value: ratio(w(CALM), w(LIVELY)) },
+    { left: 'Local', right: 'Wanderer', value: places.size ? Math.min(0.92, 0.12 + 0.2 * (places.size - 1)) : null },
+  ];
+  return dials
+    .filter((d) => d.value != null)
+    .map((d) => ({ ...d, value: +d.value.toFixed(2), label: dialLabel(d.value, [d.left, d.right]) }));
+}
+
+const FACET_ORDER = ['sound', 'vibe', 'place', 'era', 'thing'];
+
+/** What one save says, as a few chips: "neo-soul · warm · London · 2020s". */
+export function saveChips(save, n = 5) {
+  return save.signals
+    .filter((x) => x.tier !== 'possible')
+    .sort((a, b) => FACET_ORDER.indexOf(a.facet) - FACET_ORDER.indexOf(b.facet) || (a.tier === 'obvious' ? -1 : 1))
+    .slice(0, n)
+    .map((x) => ({ tag: x.tag, facet: x.facet, tier: x.tier, via: x.via }));
+}
+
 /**
- * Your Tastemate character: a name from your strongest clusters, the sides
- * that make it up, the apps it was read from, and "stretch" tastes: things
- * your saves point towards that you haven't saved much yet.
+ * Your Tastemate character, the way a personality test reads you: a name and
+ * tagline from your strongest tastes, a one-line description, five vibe
+ * dials, the sides that make you up (each with a few saves as proof, broken
+ * down into what they say), the apps it was read from, and stretch tastes
+ * your saves point towards but you haven't explored.
  */
 export function tasteCharacter(saves, clusters, profile) {
   const all = ensure(saves);
   if (!all.length) return null;
   const ranked = [...profile.entries()].filter(([k]) => !k.startsWith('creator:')).sort((a, b) => b[1] - a[1]).map(([k]) => k);
-  const picks = ranked.filter((t) => ARCHETYPES[t]);
-  const main = picks[0] ? ARCHETYPES[picks[0]][0] : 'Curious Explorer';
-  const side = picks.find((t, i) => i > 0 && !clusters[0]?.tags.includes(t) && t !== picks[0]);
+  // Something specific (jazz, pastry) names you before a mood (moody, chill) does.
+  const picks = [...ranked.filter((t) => ARCHETYPES[t] && facetOf(t) !== 'vibe'), ...ranked.filter((t) => ARCHETYPES[t] && facetOf(t) === 'vibe')];
+  const main = picks[0] || null;
+  const phrases = [...new Set(ranked.map((t) => PHRASES[t]).filter(Boolean))].slice(0, 3);
   const total = clusters.reduce((n, c) => n + c.count + c.maybe, 0) || 1;
-  const sides = clusters.slice(0, 3).map((c, i) => ({ index: i, tags: c.tags, share: Math.round((100 * (c.count + c.maybe)) / total) }));
+  const byId = new Map(all.map((s) => [s.id, s]));
+  const usedKeys = new Set();
+  const usedSaves = new Set();
+  const sides = clusters.slice(0, 3).map((c, i) => {
+    // Each side gets its own name, and its own saves as proof.
+    const free = (t) => ARCHETYPES[t] && !usedKeys.has(t);
+    // The seed names its side when it can; otherwise something specific in it does.
+    const key = (free(c.tags[0]) && c.tags[0]) || c.tags.find((t) => free(t) && facetOf(t) !== 'vibe') || c.tags.find(free) || c.tags.find((t) => !usedKeys.has(t)) || c.tags[0];
+    usedKeys.add(key);
+    const firmIds = [...c.tiers.obvious, ...c.tiers.translated].filter((x) => !usedSaves.has(x.id));
+    const kinds = new Set();
+    const proof = [...firmIds.filter((x) => !kinds.has(x.kind) && kinds.add(x.kind)), ...firmIds]
+      .filter((x, k, arr) => arr.findIndex((y) => y.id === x.id) === k)
+      .slice(0, 3);
+    proof.forEach((x) => usedSaves.add(x.id));
+    return {
+      index: i,
+      key,
+      name: ARCHETYPES[key] ? ARCHETYPES[key][1].replace(/^(a|an) /, '') : `${key} side`,
+      tags: c.tags,
+      share: Math.round((100 * (c.count + c.maybe)) / total),
+      proof: proof.map((x) => {
+        const sv = byId.get(x.id);
+        return { id: x.id, title: sv.title, creator: sv.creator, kind: sv.kind, source: sv.source, chips: saveChips(sv) };
+      }),
+    };
+  });
   const apps = countBy(all.filter((s) => s.source !== 'tastemate'), (s) => s.source);
-  // Stretch: strongest could-be tags you rarely say outright.
+  // Stretch: strongest could-be tastes you rarely say outright. Only things
+  // you can go and try: sounds and things, not moods, places or eras.
   const firm = new Map();
   const maybe = new Map();
+  const why = {};
   for (const s of all) for (const x of s.signals) {
     const m = x.tier === 'possible' ? maybe : firm;
     m.set(x.tag, (m.get(x.tag) || 0) + x.conf);
+    if (x.tier === 'possible' && !why[x.tag]) why[x.tag] = x.via;
   }
   const stretch = [...maybe.entries()]
-    .filter(([t]) => (firm.get(t) || 0) < 1.5 && !VIBE_WORDS.has(t))
+    .filter(([t]) => (firm.get(t) || 0) < 1.5 && ['sound', 'thing'].includes(facetOf(t)) && t !== 'food')
     .sort((a, b) => b[1] - a[1])
     .slice(0, 4)
     .map(([t]) => t);
   return {
-    name: `The ${main}`,
-    tagline: side ? `with ${ARCHETYPES[side][1]}` : null,
+    name: `The ${main ? ARCHETYPES[main][0] : 'Curious Explorer'}`,
+    key: main || 'explorer',
+    tagline: (() => {
+      const other = sides.find((sd) => sd.key !== main && ARCHETYPES[sd.key]) || (picks[1] && { key: picks[1] });
+      return other ? `with ${ARCHETYPES[other.key][1]}` : null;
+    })(),
+    description: phrases.length ? `You’re drawn to ${phrases.length > 1 ? `${phrases.slice(0, -1).join(', ')} and ${phrases.at(-1)}` : phrases[0]}.` : null,
+    dials: vibeDials(all, profile),
     sides,
     apps: Object.entries(apps).sort((a, b) => b[1] - a[1]).map(([source, n]) => ({ source, label: SOURCE_LABEL[source] || source, n })),
     saves: all.length,
     stretch,
+    stretchWhy: Object.fromEntries(stretch.map((t) => [t, why[t]])),
   };
 }
 
@@ -322,6 +374,33 @@ function countBy(list, key) {
   const m = {};
   for (const x of list) m[key(x)] = (m[key(x)] || 0) + 1;
   return m;
+}
+
+// A day out, slot by slot: what kind of spot fits each part of the day.
+const DAY_SLOTS = [
+  { slot: 'Morning', tags: ['coffee', 'pastry', 'market', 'outdoors', 'books'], kinds: ['place'] },
+  { slot: 'Afternoon', tags: ['art', 'gallery', 'craft', 'architecture', 'design', 'photography', 'vinyl', 'books', 'market'], kinds: ['place', 'event'] },
+  { slot: 'Evening', tags: ['jazz', 'wine bar', 'cocktails', 'live music', 'comedy', 'moody', 'intimate', 'house', 'techno', 'food', 'folk'], kinds: ['event', 'place'] },
+];
+
+/**
+ * Your perfect day in a city: the best-matching spot for the morning, the
+ * afternoon and the evening, each a different place, events only if they're
+ * on in the next week.
+ */
+export function perfectDay({ profile, saves, spots, city, today = new Date().toISOString().slice(0, 10), exclude = new Set() }) {
+  const to = new Date(Date.parse(today) + 7 * 864e5).toISOString().slice(0, 10);
+  const used = new Set(exclude);
+  const out = [];
+  for (const { slot, tags, kinds } of DAY_SLOTS) {
+    const pool = spots.filter((sp) => kinds.includes(sp.kind) && sp.city && sp.tags.some((t) => tags.includes(t)));
+    const best = rankSpots({ profile, saves, spots: pool, city, from: today, to, exclude: used, today })[0];
+    if (!best) continue;
+    used.add(best.spot.id);
+    const because = best.spot.tags.filter((t) => (profile.get(t) || 0) > 0).sort((a, b) => profile.get(b) - profile.get(a)).slice(0, 2);
+    out.push({ slot, spot: best.spot, match: best.match, because });
+  }
+  return out;
 }
 
 /** Does an event run at some point between from and to (ISO dates, inclusive)? */
@@ -365,6 +444,8 @@ export function rankSpots({ profile, saves = [], spots, city, from, to, friendSa
 
     const f = new Map(spot.tags.map((t) => [t, 1]));
     for (const c of spot.creators || []) f.set(`creator:${c.toLowerCase()}`, 1.5);
+    // The city is part of a spot's character too: loving London artists counts towards London.
+    if (spot.city) f.set(spot.city.toLowerCase(), 0.6);
     const content = cosine(profile, f);
     const friends = friendSaves.get(spot.id) || [];
     if (content <= 0 && !friends.length) continue;

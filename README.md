@@ -5,9 +5,14 @@ connected into one taste, and turned into *what should I do, buy or go to
 next*: at home tomorrow, on a trip to Bangkok, or when you're having people
 over tonight.
 
-The feature at its heart is the **taste graph**: Tastemate reads every save
-as a whole (not just what's labelled) and builds clusters of taste from what
-your saves say outright, what they mean, and what they could be.
+> **Tastemate turns everything you've saved, across every app, into your
+> taste character, then into real things to do, see and buy, near you or on
+> your next trip, with a little push beyond your usual.**
+
+At its heart is the **taste graph**: Tastemate reads every save as a whole,
+breaks it into what it says (one Olivia Dean song → neo-soul, warm, London,
+2020s), and builds your character from what your saves say outright, what
+they mean, and what they could be.
 
 See [DESIGN.md](DESIGN.md) for the product thinking, the model, the data
 model and an honest feasibility check.
@@ -55,37 +60,45 @@ npm run build && npm start   # serves the API and the built app on :3001
 | `IG_USER_ID` | *(unset)* | Your Instagram business account ID, for the venue feed |
 | `IG_ACCESS_TOKEN` | *(unset)* | A Meta Graph API token with `instagram_basic` |
 | `VENUE_ACCOUNTS` | *(unset)* | Venues to follow, e.g. `Dublin:workmansclub,Bangkok:studiolam` |
+| `MUSICBRAINZ` | on | Set to `off` to stop looking up unknown artists on MusicBrainz |
+| `MUSICBRAINZ_UA` | Tastemate UA | User-Agent MusicBrainz asks for (include a contact) |
 
 Without the three `IG_` / `VENUE_` variables the venue feed is off; pasting
 posts still works.
 
 ## What's in it
 
-- **Saves:** import the data export from each app (Spotify `YourLibrary.json`,
-  Instagram `saved_collections.json`, Google Takeout `Saved Places.json` or
-  list CSVs, pasted Pinterest pins), or add a save by hand. Every save is
-  tagged automatically and you can retag anything.
-- **Taste clusters:** recurring tastes that run across your apps, e.g.
-  *jazz · chill · cerebral*, each with its evidence in three tiers:
-  - **Obvious:** says it outright ("Jazz café with a record wall").
-  - **Translated:** means it without saying it ("Vinyl listening bar",
-    a Miles Davis track, "@bluenote.records").
-  - **Could be:** goes with it, or matches your habits ("most of your
-    intimate saves are also jazz").
-- **Your Tastemate character:** who your saves say you are, e.g. *The
-  Late-Night Listener, with a candlelit streak*: your top sides as shares,
-  the apps it was read from, and **stretch** tastes your saves point
-  towards but you haven't explored yet.
-- **Taste universe:** your tastes as floating bubbles (bigger = more
-  loved), glowing by side, with lines for what goes together. Tap one to see
-  *why it's you*. Also as a cloud, or a plain list.
+- **You** (the first tab): your Tastemate character, the way a personality
+  test reads you, not a list of what you saved:
+  - a name, tagline and one-liner: *The Late-Night Listener, with a
+    candlelit streak. You're drawn to low-lit rooms, records with a story
+    and slow evenings.* With a cartoon emblem, and a share button;
+  - **How you roll:** five dials (early bird ↔ night owl, homebody ↔ out
+    and about, classic ↔ fresh, calm ↔ lively, local ↔ wanderer);
+  - **The sides of you:** your top three sides, each proved by a few saves
+    broken down into what they say;
+  - **Your perfect day** in your home city (morning, afternoon, evening);
+  - **Stretch your taste:** what your saves keep hinting at that you
+    haven't explored;
+  - **Your taste twin** among your friends;
+  - **Feed your Tastemate:** import the data export from each app (Spotify
+    `YourLibrary.json`, Instagram `saved_collections.json`, Google Takeout
+    `Saved Places.json` or list CSVs, pasted Pinterest pins) or add a save
+    by hand. Everything you've saved stays in a drawer, each save shown as
+    its parts (artist, sound, vibe, place, era), and retaggable.
+- **Breaking saves down:** each save is read for facets, in three tiers:
+  **obvious** (says it), **translated** (means it: "Vinyl listening bar"
+  → jazz, Olivia Dean → London neo-soul) and **could be** (goes with it, or
+  matches your habits). Artists the built-in list doesn't know are looked up
+  on MusicBrainz in the background and cached.
 - **Next:** pick a city and Tomorrow, This weekend, Next 2 weeks or trip
-  dates. Get events, places and things to buy, each explained by your own
-  saves ("jazz: 4 on Spotify, 2 on Google Maps"), what friends saved, what
-  just opened, and a boost for **under-the-radar** spots. Your own saves in
-  that city come first, so a trip never forgets the café you starred years ago.
-  **Why?** on any pick draws the streams from your apps, through the tastes
-  they share, into the pick's match ring.
+  dates. Get events (*Worth leaving the house for*), places (*Spots with
+  your name on them*) and things to buy (*Little things you'd love*), each
+  with a short reason, plus **Something a little different** from your
+  stretch tastes. Your own saves in that city come first (*Don't forget,
+  you saved these*). Loving London artists counts towards London spots, and
+  **under-the-radar** places get a boost. **Why?** on any pick draws the
+  streams from your apps, through the tastes they share, into its match ring.
 - **Events from posts:** paste a venue's Instagram or Facebook post and
   Tastemate reads the date, time, venue, city and price into an event
   for you to check. Friends see it too. Optionally follow venue accounts
@@ -105,15 +118,17 @@ server/
   app.js            Express app (createApp is used by the tests too)
   db.js             schema + helpers (node:sqlite)
   taxonomy.js       shared tag vocabulary, keyword rules, readSignals()
-  taste-graph.js    interpret saves, profile, clusters, rank spots (pure)
+  taste-graph.js    interpret saves, profile, clusters, character, perfect day, rank spots (pure)
+  creators.js       built-in artist facts (sound, vibe, from, era)
+  enrich.js         background artist lookups, cache, re-tagging
   importers.js      parse each app's data export into saves
   posts.js          read a venue post into an event draft
   occasions.js      plan an occasion from a cluster (pure)
   routes/           auth, friends, saves (saves, graph, next, spots, occasion)
-  providers/        venue-posts (Instagram Business Discovery)
+  providers/        venue-posts (Instagram Business Discovery), musicbrainz (artist facts)
   seed/             sample spots and demo users
 web/src/            React SPA (pages/, components/, styles.css)
-test/               node:test tests: graph, importers, posts, occasions, API
+test/               node:test tests: graph, importers, posts, occasions, MusicBrainz, API
 ```
 
 ## Tests

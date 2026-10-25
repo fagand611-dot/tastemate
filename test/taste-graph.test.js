@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { autoTag, guessKind, readSignals } from '../server/taxonomy.js';
 import { cityFrom, csv, parseImport } from '../server/importers.js';
-import { cosine, findPatterns, inWindow, interpret, rankSpots, tasteCharacter, tasteProfile, tasteWeb, toPercent } from '../server/taste-graph.js';
+import { cosine, findPatterns, inWindow, interpret, perfectDay, rankSpots, tasteCharacter, tasteProfile, toPercent } from '../server/taste-graph.js';
 
 test('autoTag: keywords and music genres become shared tags', () => {
   assert.deepEqual(new Set(autoTag('Candlelit wine bar')), new Set(['moody', 'intimate', 'romantic', 'wine bar']));
@@ -153,26 +153,6 @@ test('inWindow: multi-day events overlap the range', () => {
   assert.ok(inWindow(ev, '2026-11-10', '2026-11-12'));
   assert.ok(!inWindow(ev, '2026-12-01', '2026-12-02'));
   assert.ok(inWindow({ kind: 'place' }, '2030-01-01', '2030-01-02'));
-});
-
-test('tasteWeb: tags as nodes in clusters, joined when saved together', () => {
-  const saves = interpret([
-    save(1, 'song', 'spotify', ['jazz', 'chill'], { title: 'So What', creator: 'Miles Davis' }),
-    save(2, 'song', 'spotify', ['jazz', 'chill'], { title: 'late night jazz' }),
-    save(3, 'place', 'google_maps', ['jazz', 'intimate', 'vinyl'], { title: 'Vinyl listening bar' }),
-    save(4, 'food', 'instagram', ['pastry'], { title: 'Bakery' }),
-  ]);
-  const clusters = findPatterns(saves);
-  const web = tasteWeb(saves, clusters, tasteProfile(saves));
-  const node = (id) => web.nodes.find((n) => n.id === id);
-  assert.equal(node('jazz').cluster, 0);
-  assert.equal(node('jazz').firm, 3);
-  assert.equal(node('jazz').saves[0].tier, 'obvious', 'firm evidence first');
-  assert.equal(node('pastry').cluster, null, 'a tag in no cluster is an other taste');
-  const jazzChill = web.edges.find((e) => [e.a, e.b].sort().join() === 'chill,jazz');
-  assert.ok(jazzChill.w > 1.4, 'two saves at 0.7 each, plus a could-be from the listening bar');
-  assert.ok(!web.edges.some((e) => e.a === 'pastry' || e.b === 'pastry'), 'never saved with anything else');
-  assert.deepEqual(web.clusters[0].tags, clusters[0].tags);
 });
 
 test('tasteCharacter: a name from your strongest taste, your sides, apps and stretch', () => {

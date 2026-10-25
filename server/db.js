@@ -78,6 +78,14 @@ CREATE TABLE IF NOT EXISTS saves (
 CREATE INDEX IF NOT EXISTS saves_user ON saves(user_id);
 CREATE INDEX IF NOT EXISTS saves_spot ON saves(spot_id);
 
+-- Artists looked up on MusicBrainz (facts is null when there was no match,
+-- so they aren't looked up again).
+CREATE TABLE IF NOT EXISTS creator_facts (
+  name TEXT PRIMARY KEY,
+  facts TEXT,
+  fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS spot_dismissals (
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   spot_id INTEGER NOT NULL REFERENCES spots(id) ON DELETE CASCADE,

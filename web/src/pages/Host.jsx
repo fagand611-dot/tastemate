@@ -14,7 +14,7 @@ export default function Host() {
 
   return (
     <>
-      <PageHead title="Host" intro="Having people over? Pick the occasion. We’ll pull one theme from your saves and match the wine, food, music and invitation to it." />
+      <PageHead title="Set the mood" intro="Having people over? Pick the occasion and we’ll pull a whole evening out of your taste: what to pour, serve and play, and how to invite them." />
       <Loading state={state}>
         {(d) => (
           <>
@@ -25,11 +25,11 @@ export default function Host() {
             </div>
 
             {d.themes.length === 0 ? (
-              <Empty>Save a few more things first. Themes come from your taste clusters. <Link to="/saves">Import your saves</Link></Empty>
+              <Empty>Bring in a few more saves first: the mood comes from your taste. <Link to="/you">Feed your Tastemate</Link></Empty>
             ) : (
               <>
                 <div className="chips" aria-label="Themes">
-                  <span className="label">Themes from your saves</span>
+                  <span className="label">Moods from your saves</span>
                   {d.themes.map((t) => (
                     <button key={t.index} className={`chip ${d.theme.index === t.index ? 'on' : ''}`} onClick={() => setTheme(t.index)}>{t.name}</button>
                   ))}
@@ -61,19 +61,19 @@ function Plan({ d }) {
       <div className="host-grid">
         <Invite invite={d.invite} />
         <section className="panel">
-          <h2><Icon name="cup" /> To drink</h2>
+          <h2><Icon name="cup" /> Pour this</h2>
           <IdeaList title="Wine" items={d.drinks.wine} />
           <IdeaList title="Cocktails" items={d.drinks.cocktails} />
           <IdeaList title="Without alcohol" items={d.drinks.zero} />
         </section>
         <section className="panel">
-          <h2><Icon name="sparkle" /> To eat</h2>
+          <h2><Icon name="sparkle" /> Serve this</h2>
           <IdeaList title="As people arrive" items={d.food.snacks} />
           <IdeaList title="Main" items={d.food.main} />
           <IdeaList title="Sweet" items={d.food.sweet} />
         </section>
         <section className="panel">
-          <h2><Icon name="music" /> Playlist</h2>
+          <h2><Icon name="music" /> Press play</h2>
           {d.playlist.fromSaves.length > 0 && (
             <>
               <span className="label">From your saves</span>
@@ -99,8 +99,8 @@ function Plan({ d }) {
         <section className="shelf-section">
           <div className="shelf-head">
             <div>
-              <h2><Icon name="image" /> Moodboard</h2>
-              <p className="shelf-sub">Your own saves, from every app, that carry this theme.</p>
+              <h2><Icon name="image" /> The vibe</h2>
+              <p className="shelf-sub">Your own saves, from every app, that set this mood.</p>
             </div>
           </div>
           <div className="moodboard">
@@ -123,7 +123,7 @@ function Plan({ d }) {
 
       {d.shop.length > 0 && (
         <section className="shelf-section">
-          <div className="shelf-head"><h2><Icon name="bag" /> Pick up{d.city ? ` in ${d.city}` : ''}</h2></div>
+          <div className="shelf-head"><h2><Icon name="bag" /> Grab on the way{d.city ? ` in ${d.city}` : ''}</h2></div>
           <ul className="plan">
             {d.shop.map((s) => (
               <li key={s.id}>
@@ -187,7 +187,7 @@ function Invite({ invite }) {
   };
   return (
     <section className="panel invite-panel">
-      <h2><Icon name="note" /> Invitation</h2>
+      <h2><Icon name="note" /> Send the invite</h2>
       <div className={`invite type-${invite.type}`} style={{ '--bg': invite.colors.bg, '--ink': invite.colors.ink, '--accent': invite.colors.accent }}>
         <svg className="invite-motif" viewBox="0 0 100 100" aria-hidden>{MOTIFS[invite.motif]}</svg>
         <p className="invite-line">{invite.line}</p>

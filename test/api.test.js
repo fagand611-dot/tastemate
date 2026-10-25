@@ -4,13 +4,24 @@ import { openDb } from '../server/db.js';
 import { createApp } from '../server/app.js';
 import { seedSpots } from '../server/seed/seed.js';
 
+// Stands in for MusicBrainz: knows one artist the built-in list doesn't.
+const lookups = [];
+const fakeLookup = async (name) => {
+  lookups.push(name);
+  if (name === 'Nonexistent Band') return null;
+  if (name === 'Lagos Sound') return { role: 'band', sounds: ['afrobeat'], moods: [], from: 'Lagos', era: '2010s' };
+  throw new Error('offline');
+};
+
 let server;
+let app;
 let base;
 
 before(async () => {
   const db = openDb(':memory:');
   seedSpots(db);
-  server = createApp({ db, venueFeed: null }).listen(0);
+  app = createApp({ db, venueFeed: null, artistLookup: fakeLookup });
+  server = app.listen(0);
   await new Promise((r) => server.once('listening', r));
   base = `http://localhost:${server.address().port}/api`;
 });
@@ -107,12 +118,39 @@ test('saves: import, add, retag, graph with tiered clusters', async () => {
   assert.equal((await other.patch(`/saves/${song.id}`, { tags: [] })).status, 404, 'saves are private');
   assert.equal((await other.del(`/saves/${song.id}`)).status, 404);
 
-  const graph = (await me.get('/graph')).body;
-  assert.equal(graph.total, 4);
-  const jazz = graph.patterns.find((p) => p.tags[0] === 'jazz');
-  assert.ok(jazz, JSON.stringify(graph.patterns.map((p) => p.tags)));
-  assert.ok(jazz.tiers.translated.some((x) => x.title === 'Listening bar'));
-  assert.ok(graph.possible > 0);
+  const you = (await me.get('/you')).body;
+  assert.equal(you.total, 4);
+  assert.equal(you.character.name, 'The Late-Night Listener');
+  assert.ok(you.character.description.startsWith('You’re drawn to'));
+  assert.ok(you.character.dials.length >= 2);
+  assert.ok(you.character.sides.length >= 1);
+  assert.ok(you.character.sides[0].proof.every((p) => p.chips.length > 0), 'each proof save is broken down');
+});
+
+test('saves break down into facets, and unknown artists are looked up in the background', async () => {
+  const me = await signup('breaker');
+  await me.post('/saves/import', { source: 'spotify', text: 'Olivia Dean - Dive' });
+  let dive = (await me.get('/saves')).body.saves.find((s) => s.title === 'Dive');
+  assert.deepEqual(dive.facets.place.map((x) => x.tag), ['london']);
+  assert.deepEqual(dive.facets.era.map((x) => x.tag), ['2020s']);
+  assert.ok(dive.facets.sound.some((x) => x.tag === 'neo-soul'));
+  assert.ok(dive.facets.vibe.some((x) => x.tag === 'warm'));
+  assert.match(dive.facets.place[0].via, /Olivia Dean is from London/);
+
+  const r = await me.post('/saves/import', { source: 'spotify', text: 'Lagos Sound - Night Drive\nNonexistent Band - Song\nOffline Artist - Track' });
+  assert.equal(r.body.lookingUp >= 1, true);
+  await app.locals.enricher.whenIdle();
+  const saves = (await me.get('/saves')).body.saves;
+  const drive = saves.find((s) => s.title === 'Night Drive');
+  assert.deepEqual(drive.facets.place.map((x) => x.tag), ['lagos']);
+  assert.ok(drive.tags.includes('afrobeat') && drive.tags.includes('jazz'), 'new facets are added to the save');
+  assert.equal(saves.find((s) => s.title === 'Song').facets.place, undefined, 'no match, nothing invented');
+
+  // Known answers are cached; a failed lookup is tried again next time.
+  lookups.length = 0;
+  await me.post('/saves/import', { source: 'spotify', text: 'Lagos Sound - Another\nNonexistent Band - B\nOffline Artist - C' });
+  await app.locals.enricher.whenIdle();
+  assert.deepEqual(lookups, ['Offline Artist']);
 });
 
 test('next: city, friends, save and dismiss, home city, your own saves there', async () => {
@@ -143,8 +181,15 @@ test('next: city, friends, save and dismiss, home city, your own saves there', a
   assert.ok(!next.places.some((p) => p.spot.id === place.id));
   assert.deepEqual(next.saved.map((s) => s.spot.id), [jazz.spot.id]);
 
+  assert.ok(Array.isArray(next.stretch));
+  assert.ok(next.stretch.every((x) => x.reasons[0].type === 'stretch'));
+
   await me.put('/settings', { home_city: 'London' });
   assert.equal((await me.get('/me')).body.user.home_city, 'London');
+  const day = (await me.get('/you')).body.day;
+  assert.ok(day.length >= 1, 'a perfect day in your home city');
+  assert.ok(day.every((d) => d.spot.city === 'London'));
+  assert.equal(new Set(day.map((d) => d.spot.id)).size, day.length, 'three different places');
   assert.equal((await me.get('/next')).body.city, 'London');
   assert.equal((await me.get('/next?from=2026-02-01&to=2026-01-01')).status, 400);
   assert.equal((await me.post('/spots/99999/save')).status, 404);

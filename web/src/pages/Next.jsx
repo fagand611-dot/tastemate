@@ -24,11 +24,11 @@ const WHEN = {
   trip: { label: 'Trip dates', range: null },
 };
 
-const KIND_LABEL = { event: 'Events', place: 'Places', product: 'Things to buy' };
+const KIND_LABEL = { event: 'Worth leaving the house for', place: 'Spots with your name on them', product: 'Little things you’d love' };
 const KIND_SUB = {
-  event: 'On while you’re there, matched to what you save',
-  place: 'Spots that fit your saves, including ones that just opened',
-  product: 'In shops in the city, or shipping there',
+  event: 'On while you’re there, picked from what you save',
+  place: 'Places that fit you, including ones that just opened',
+  product: 'In shops nearby, or happy to ship to you',
 };
 
 // Next: pick a city and dates, get events, places and products ranked by
@@ -57,8 +57,8 @@ export default function Next() {
 
   return (
     <>
-      <PageHead title="Next" intro="What to do, see and buy, picked from everything you’ve saved across your apps.">
-        <Link to="/host" className="btn btn-outline"><Icon name="sparkle" size={18} /> Hosting?</Link>
+      <PageHead title="Where to next?" intro="Things to do, see and buy, picked from everything you’ve saved.">
+        <Link to="/host" className="btn btn-outline"><Icon name="cup" size={18} /> Staying in?</Link>
       </PageHead>
       <Loading state={state}>
         {(d) => (
@@ -94,13 +94,13 @@ export default function Next() {
             <PostToEvent cities={d.cities} canRefresh={d.canRefreshPosts} onAdded={state.reload} />
 
             {d.profileSize === 0 && (
-              <p className="notice">Nothing to go on yet. <Link to="/saves">Import your saves</Link> from Spotify, Instagram or Google Maps and this page fills up.</p>
+              <p className="notice">Nothing to go on yet. <Link to="/you">Feed your Tastemate</Link> with saves from Spotify, Instagram or Google Maps and this page fills up.</p>
             )}
 
             {d.yourSaves.length > 0 && (
               <section className="panel remember">
-                <h2><Icon name="bookmark" /> You already saved these in {d.city}</h2>
-                <p className="muted small">Easy to forget when you’re planning. They’re from your own lists.</p>
+                <h2><Icon name="bookmark" /> Don’t forget, you saved these</h2>
+                <p className="muted small">From your own lists for {d.city}. Easy to lose track of when you’re planning.</p>
                 <ul className="save-chips">
                   {d.yourSaves.map((s) => (
                     <li key={s.id}>
@@ -132,9 +132,21 @@ export default function Next() {
               );
             })}
 
+            {d.stretch?.length > 0 && (
+              <section className="shelf-section">
+                <div className="shelf-head">
+                  <div>
+                    <h2><Icon name="sparkle" /> Something a little different</h2>
+                    <p className="shelf-sub">Your saves keep hinting at these. Worth a go?</p>
+                  </div>
+                </div>
+                <div className="grid">{d.stretch.map((x) => <SpotCard key={x.spot.id} {...x} onAct={act} />)}</div>
+              </section>
+            )}
+
             {d.saved.length > 0 && (
               <section className="shelf-section">
-                <div className="shelf-head"><h2><Icon name="check" /> Your plan</h2></div>
+                <div className="shelf-head"><h2><Icon name="check" /> Your plan so far</h2></div>
                 <ul className="plan">
                   {d.saved.map((s) => (
                     <li key={s.id}>
@@ -204,7 +216,7 @@ function PostToEvent({ cities, canRefresh, onAdded }) {
   if (!open) {
     return (
       <div className="row post-cta">
-        <button className="btn btn-sm btn-outline" onClick={() => setOpen(true)}><Icon name="plus" size={16} /> Saw an event post? Add it</button>
+        <button className="btn btn-sm btn-outline" onClick={() => setOpen(true)}><Icon name="plus" size={16} /> Spotted an event online? Add it</button>
         {canRefresh && <button className="btn btn-sm btn-ghost" onClick={refresh}><Icon name="refresh" size={16} /> Check venues I follow</button>}
         {msg && <span className="small">{msg}</span>}
       </div>
@@ -286,16 +298,16 @@ function SpotCard({ spot, match, reasons, onAct }) {
         <h3>{spot.url ? <a href={spot.url} target="_blank" rel="noreferrer">{spot.title}</a> : spot.title}</h3>
         <p className="sub">{[spot.venue, spot.city || 'Online'].filter(Boolean).join(' · ')}</p>
         {spot.description && <p className="desc">{spot.description}</p>}
-        <SpotReasons reasons={reasons} />
+        <SpotReasons reasons={reasons} compact />
         <div className="actions">
           <button disabled={busy} className="btn btn-sm btn-outline" onClick={() => go('save')}><Icon name="plus" size={16} /> Save</button>
-          <button className="btn btn-sm btn-ghost" onClick={() => setWhy(true)}><Icon name="graph" size={16} /> Why?</button>
+          <button className="btn btn-sm btn-ghost why-btn" onClick={() => setWhy(true)}><Icon name="graph" size={16} /> Why?</button>
           <button disabled={busy} className="icon-btn" aria-label="Not for me" title="Not for me" onClick={() => go('dismiss')}><Icon name="x" size={18} /></button>
         </div>
       </div>
       {why && (
-        <Dialog title={`Why ${spot.title}`} onClose={() => setWhy(false)}>
-          <p className="muted small">How your saves connect to this pick. Wider bands mean more of your saves.</p>
+        <Dialog title={`Why ${spot.title}?`} onClose={() => setWhy(false)}>
+          <p className="muted small">How your saves led here. The wider the stream, the more of your saves.</p>
           <WhyFlow spot={spot} match={match} reasons={reasons} />
           <SpotReasons reasons={reasons} />
         </Dialog>
@@ -304,8 +316,33 @@ function SpotCard({ spot, match, reasons, onAct }) {
   );
 }
 
-function SpotReasons({ reasons }) {
+function SpotReasons({ reasons, compact }) {
   if (!reasons?.length) return null;
+  // On a card: one friendly line per reason. The full detail lives behind "Why?".
+  if (compact) {
+    const ev = reasons.find((r) => r.type === 'saves')?.evidence || [];
+    const lines = [];
+    const st = reasons.find((r) => r.type === 'stretch');
+    if (st) lines.push(['sparkle', <>A stretch for you: <b>{st.tags.join(', ') || 'something new'}</b></>]);
+    if (ev[0]) {
+      const n = ev[0].sources.reduce((a, x) => a + x.n, 0);
+      lines.push(['sparkle', <><b>{ev[0].tag}</b>{ev[1] ? <> &amp; <b>{ev[1].tag}</b></> : null} · {n} of your saves</>]);
+    }
+    const tags = reasons.find((r) => r.type === 'tags');
+    if (!ev[0] && tags) lines.push(['sparkle', <>Fits your <b>{tags.tags.slice(0, 2).join(' & ')}</b></>]);
+    const fr = reasons.find((r) => r.type === 'friends');
+    if (fr) lines.push(['users', <>{fr.names.join(', ')} saved it</>, 'friend']);
+    const creator = reasons.find((r) => r.type === 'creator');
+    if (creator) lines.push(['heart', <>Features <b>{creator.name}</b></>]);
+    const nw = reasons.find((r) => r.type === 'new');
+    if (nw) lines.push(['clock', <>Just opened</>]);
+    else if (reasons.some((r) => r.type === 'gem')) lines.push(['star', <>Under the radar</>]);
+    return (
+      <ul className="reasons">
+        {lines.slice(0, 3).map(([icon, text, cls], i) => <li key={i} className={cls}><Icon name={icon} size={14} /> <span>{text}</span></li>)}
+      </ul>
+    );
+  }
   return (
     <ul className="reasons">
       {reasons.map((r, i) => {
@@ -322,6 +359,7 @@ function SpotReasons({ reasons }) {
         if (r.type === 'tags') return <li key={i}><Icon name="sparkle" size={14} /> <span>Fits your taste for <b>{r.tags.join(', ')}</b></span></li>;
         if (r.type === 'friends') return <li key={i} className="friend"><Icon name="users" size={14} /> <span>{r.names.join(', ')} saved it</span></li>;
         if (r.type === 'new') return <li key={i}><Icon name="clock" size={14} /> <span>Just opened{r.days > 0 ? `, ${r.days} days ago` : ''}</span></li>;
+        if (r.type === 'stretch') return <li key={i}><Icon name="sparkle" size={14} /> <span>A stretch: <b>{r.tags.join(', ') || 'something new'}</b>{r.why ? <span className="muted"> · {r.why}</span> : null}</span></li>;
         if (r.type === 'gem') return <li key={i}><Icon name="star" size={14} /> <span>Under the radar: you wouldn’t see it pushed elsewhere</span></li>;
         return null;
       })}
