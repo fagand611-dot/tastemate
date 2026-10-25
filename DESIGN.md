@@ -1,264 +1,174 @@
 # Tastemate: design
 
-> One place to learn your taste across **film, TV, music and books**, get
-> recommendations that explain themselves, and share them with friends.
->
-> **Taste graph (§9):** everything you save everywhere (Spotify, Instagram,
-> Google Maps, Pinterest), connected into *what should I do, buy or go to
-> next*, at home tomorrow or on a trip to Bangkok.
+> Everything you save everywhere, connected into *what should I do, buy or
+> go to next*.
 
-## 1. The problem, restated
+## 1. The problem
 
-- You have **wide taste** (drama, action, comedy, horror, house, rock, folk…).
-  Most recommenders are tied to one medium (Netflix, Spotify, Goodreads), so each
-  one only sees part of your taste and pushes you toward its own catalogue.
-- **Finding good older work is as hard as finding new work.** Streaming feeds
-  favour what's new and what they host.
-- Advice from **friends you trust** beats an algorithm, but it's spread across
-  group chats and gets lost.
-- **Upcoming work** (films in production, announced seasons, forthcoming
-  albums and books) is hard to track unless you follow industry news.
+You have interests across many things, and a different app for each.
+Songs you like (and the one you heard on the street) go into Spotify. Looks,
+pastry accounts and art go into Instagram collections. Places you loved,
+want to visit or were told about get starred in Google Maps. Rooms and
+outfits go onto Pinterest boards.
 
-## 2. Product pillars
+Almost none of it gets used again:
 
-| Pillar | What it means in the app |
+- **Planning a trip, you forget.** In Bangkok you're overwhelmed and miss
+  the gallery showing exactly the kind of art you save, or the jazz café you
+  starred two years ago.
+- **At home, only the big names reach you.** You'll hear about the stadium
+  show. The small comedy-jazz night you'd love isn't pushed to anyone.
+- **Each app sees a fragment.** "Moody jazz + dark academia outfits +
+  candlelit wine bars" is one taste split across four apps, and each only
+  recommends from its own catalogue.
+
+## 2. Two layers, built in order
+
+| Layer | What it is |
 |---|---|
-| **Learns you** | Ratings (1–10), "want", and "not for me" signals build a *taste profile* that covers every medium. You can see and adjust it. |
-| **Crosses media** | Items carry shared **mood tags** (dark, cerebral, uplifting, atmospheric, high-energy…) on top of genres, so "loved *True Detective*" can surface a Southern-gothic novel or a moody folk album. |
-| **Explains itself** | Every recommendation comes with reasons: *"Because you loved Heat · tense, crime"*, *"Maya rated it 9/10"*. |
-| **Social, not a broadcast** | Friends (mutual), lists, reviews with scores, an activity feed, and a **taste-match %** with each friend. |
-| **Looks ahead** | A **Radar** of upcoming and in-production titles, ranked against your taste, with a watchlist. |
-| **Old and new together** | Recommendations deliberately mix eras and media rather than chasing what's new. |
+| **A. My saves, connected** | Saves from every app land in one place, read for what they signal, and grouped into visible taste clusters. |
+| **B. Taste → action** | The clusters rank real events, places and products for a city and dates, and plan occasions. Every suggestion says which of your saves led to it. |
 
-## 3. Core user journeys
+B only works once A exists. Products that try B without A end up with
+generic recommendations, which is why import and interpretation come first.
 
-1. **Onboarding (cold start).** Pick the genres and moods you like in each
-   medium, then rate a handful of well-known titles. That's enough for useful
-   first recommendations.
-2. **For You (home).** Instead of one long list, a single top pick and themed
-   rows, each with its own reason for existing: *New in your circle* comes
-   first, then *Because you loved X*, a cross-medium *The feel of X, beyond the
-   screen*, a mood of the day, *Coming soon for you*, classics, recent releases,
-   friends' lists and *Something different*. Each title appears only once on
-   the page, and the featured favourite and mood rotate daily so the page
-   changes. (`server/shelves.js`)
-2b. **Browse.** The full ranked feed, filterable by medium, with reasons on every
-   card. One-tap actions: rate, *Want*, *Not for me*. Each action updates the
-   profile immediately.
-3. **Search and add.** Search the local catalogue and external sources (TMDB for
-   film/TV, Open Library for books, MusicBrainz for music). Importing a result
-   adds it to the shared catalogue.
-4. **Review.** Score from 1 to 10 plus optional text, visible to friends.
-5. **Lists.** "Best folk records for a rainy Sunday" with per-item notes.
-   Visibility is private, friends, or public.
-6. **Friends.** Send and accept requests, see a friend's lists and reviews, and
-   see a taste-match score.
-7. **Feed.** What friends rated, reviewed and listed recently.
-8. **Radar.** Upcoming and in-production work, ranked by taste, which you can
-   add to your watchlist.
-9. **Taste DNA.** Your strongest positive and negative tags, with the option to
-   pin or ban a tag.
+## 3. Core journeys
 
-## 3b. Visual design
+1. **Import.** Upload each app's data export, or paste lines. Re-importing is safe.
+2. **See your taste.** Clusters across apps, each with its evidence. Retag
+   anything the reading got wrong.
+3. **Tomorrow, at home.** Next for your home city, *Tomorrow*: small,
+   matching events first, explained in your own saves.
+4. **A trip.** Next for Bangkok with trip dates: your own Bangkok saves
+   first, then events on while you're there, places (including ones that
+   just opened), and things to buy.
+5. **A post you saw.** Paste a venue's post; check the draft; it's in your
+   plan, and friends who'd like it see it.
+6. **Hosting tonight.** Pick the occasion and a theme from your clusters;
+   get drinks, food, music, an invitation and a moodboard that belong together.
 
-Aimed at people in their late 20s to early 40s: calm, easy to scan, and
-quick to act on, on a phone or a laptop.
+## 4. Reading saves: the taste graph
 
-- **Calm editorial look.** Warm paper background in light mode and warm ink in
-  dark mode (it follows the device setting, or you can pick one on the Me page).
-  One accent colour, serif headlines (Fraunces) and Inter for everything else.
-  Line icons, no emoji.
-- **Typographic posters.** When there's no artwork, each title gets a poster:
-  the medium's colour family, the title in serif, and one of five graphic
-  motifs picked from the title, so posters are easy to tell apart at a glance.
-- **Glanceable.** For You opens with a "Today" strip (new from friends, coming
-  soon, mood of the day, friend lists), and each card jumps to its row. One
-  filter (All / Film / TV / Books / Music) narrows every row at once.
-- **Interactive.** Every poster has a quick-action button that opens a sheet
-  for rating, Want / Watch and Not for me, with a short confirmation toast.
-- **Phone first.** A bottom tab bar (For You, Browse, Radar, Feed, Me) on
-  phones and a top bar on desktop. Library, lists, friends, Taste DNA and the
-  theme setting live under Me.
+A keyword match alone isn't taste. Tastemate reads each save as a whole
+(title, creator, collection, note) and records **signals** in three tiers
+(`server/taxonomy.js` `readSignals`, `server/taste-graph.js` `interpret`):
 
-## 4. Recommendation engine (v1: hybrid, explainable, no ML infrastructure)
+| Tier | Meaning | Examples | Weight |
+|---|---|---|---|
+| **Obvious** | The save says it | "late night **jazz**", a tag you added | 1.0 |
+| **Translated** | It means it without saying it | "listening bar" → jazz; Miles Davis → jazz; "@croissantdiaries" contains "croissant" → pastry; "concrete" → architecture | 0.7 |
+| **Could be** | It goes with it, or your habits say so | vinyl *often goes with* jazz; *most of your intimate saves are also jazz* | 0.4 × strength, or 0.35 × P(B given A) |
 
-Each item becomes a sparse feature vector:
+- **Translation** uses keyword rules over a shared vocabulary, known artists
+  (including "Duke Ellington & John Coltrane" → both), run-together handles
+  (only inside things that look like handles, so "candlelit" isn't "candle"),
+  and music genres, which carry their moods (jazz is also *chill* and
+  *cerebral*, the same words a listening bar gets).
+- **Could-be** signals come from hand-written associations (`ASSOCIATIONS`)
+  and from the user's own co-occurrences: if tag A appears in at least 3
+  saves and B appears in at least half of them, an A-only save could be B.
+  They're weighted low, so they shape a cluster without inventing one.
+
+**Profile** = Σ over saves of `signal confidence / √(firm signals in that save)`.
+
+**Clusters** (`findPatterns`): the strongest tag not yet in a cluster seeds
+one; the two tags it co-occurs with most describe it. A cluster is kept only
+if at least two saves firmly support it and its saves span more than one
+kind of thing or more than one app. Each cluster lists its evidence by tier,
+so the UI can say *why jazz*.
+
+## 5. Taste → action
+
+### Next (`rankSpots`)
 
 ```
-genre:<g>   weight 1.0   (drama, horror, house, folk, sci-fi …)
-mood:<m>    weight 1.2   (shared across media, which is what bridges them)
-creator:<c> weight 1.5   (director, author, artist)
-era:<decade> weight 0.3
+score = 0.6 · cosine(profile, spot tags)
+      + 0.2 · tanh(0.6 · friends who saved it)
+      + 0.1 · just opened (within 60 days)
+      + 0.1 · (1 − popularity)
 ```
 
-**User profile** = Σ over the user's library of `signal × features(item)`:
+The last term is deliberate: it favours the under-the-radar things nobody
+advertises to you. Filters: city (products without a city ship anywhere),
+and events must overlap the chosen dates. Reasons come from your own saves,
+grouped by app ("jazz: 4 on Spotify, 2 on Google Maps, 3 more could be"),
+plus friends, new openings and hidden gems.
 
-| Signal | Weight |
-|---|---|
-| Rating `s` (1–10) | `(s − 5.5) / 4.5` → −1 … +1 |
-| *Want* | +0.35 |
-| *Not for me* | −0.6 |
-| Onboarding / pinned tag | ±1.0 on that tag |
+### Events from posts (`server/posts.js`)
 
-**Candidate score**
+Small venues announce on Instagram and Facebook first. `parsePost` reads a
+caption into a draft: title (first line, without emoji and hashtags), date
+(ISO, "14 Nov", "Nov 14th, 2027", "14–16 November", "14/11" day-first,
+tonight, tomorrow, "this Saturday", rolling into next year when needed),
+time ("8pm", "9.30pm", "20:00"), venue ("at …", "@ …", "📍 …"), city,
+price ("€12", "free entry") and tags. Anything missing is listed so the
+person fills it in. Spots added this way are visible to the person who
+added them and their friends only.
 
-```
-content  = cosine(profile, item)                                  # what you like
-social   = tanh(Σ_friends max(0.15, tasteSim(me, f)) · norm(f.score))  # trusted friends
-quality  = Bayesian average of community scores, scaled 0..1
-final    = 0.60·content + 0.25·social + 0.15·quality
-```
+### Host (`server/occasions.js`)
 
-Then a **diversity re-rank** (MMR-style), so a page isn't 20 horror films:
-each pick is penalised by its similarity to items already picked, plus a
-small boost for media that haven't appeared yet.
+The theme is the cluster that best fits the occasion's leaning (date night
+leans *romantic* and *intimate*, house party *lively*), switchable by the
+user. The theme vector is the cluster's tags, the occasion's leaning and a
+little of the wider profile. Hand-written idea lists for drinks, food and
+records each carry tags in the same vocabulary and are scored against it.
+The invitation takes the theme's type style, motif and palette (darkest
+colour as background, readable text, most vivid readable accent). The
+moodboard is the user's own saves that carry the theme, alternating kinds.
 
-**Explanations** come from the top contributing features, mapped back to the
-highest-rated items in your library that share them, plus any friend scores.
-
-**Why not collaborative filtering or embeddings yet?** With a small friend
-group the rating matrix is very sparse, so content-based scoring plus a
-trusted-friends signal works better and is explainable. The scorer sits behind
-one function (`recommend()`), so it can later be swapped for embeddings
-(e.g. text embeddings of synopses), matrix factorisation, or LLM re-ranking
-without touching the API.
-
-## 5. Data model
+## 6. Data model
 
 ```
-users(id, username, display_name, password_hash, created_at)
+users(id, username, display_name, password_hash, home_city, created_at)
 sessions(token, user_id, expires_at)
-items(id, medium[movie|tv|book|music], title, year, creators[], genres[], moods[],
-      description, image_url, status[released|upcoming|in_production|announced],
-      release_date, source, external_id, is_demo)
-user_items(user_id, item_id, state[want|in_progress|done|dismissed],
-           score 1..10?, review?, updated_at)          -- library + ratings + reviews
-tag_prefs(user_id, tag, weight)                         -- onboarding / pinned / banned tags
 friendships(requester_id, addressee_id, status[pending|accepted], created_at)
-lists(id, owner_id, title, description, visibility[private|friends|public], …)
-list_items(list_id, item_id, note, position)
+saves(id, user_id, kind[song|place|look|product|art|food|event|other], title, creator,
+      source[spotify|instagram|google_maps|pinterest|manual|tastemate], collection, url,
+      note, city, tags[], spot_id?, external_key, saved_at, created_at)
+      UNIQUE(user_id, source, external_key)        -- re-imports are idempotent
+spots(id, kind[event|place|product], title, city, venue, creators[], tags[], description,
+      starts_at, ends_at, opened_at, price, url, popularity 0..1, source, external_id,
+      is_demo, added_by?)
+spot_dismissals(user_id, spot_id)
 ```
 
-The feed is computed from `user_items` and `lists`, so there's no separate
-events table yet.
+Signals aren't stored: they're computed from saves on each read, so better
+rules apply to old saves immediately. Saving a spot creates a save
+(`source = tastemate`), so acting feeds the graph.
 
-## 6. Architecture
+## 7. Honest feasibility
+
+| Piece | Status | Notes |
+|---|---|---|
+| Spotify saves | **Feasible.** Export works now; the Web API (`/me/tracks`, OAuth) can sync live. | API artist genres would make songs mostly *obvious*. New apps start in a limited development mode and need Spotify's approval for wider access. |
+| Instagram saves | **Export only.** No API exposes saved posts. | The export has the account and link but no caption or image, so collection names and handles carry the signal. Next: a share-sheet "save to Tastemate", then image and caption reading. |
+| Google Maps saves | **Export only** (Takeout). | Name, address and URL are enough; the Places API can add categories. |
+| Pinterest | **Feasible** via API v5 (OAuth); paste works today. | |
+| Events from venue posts | **Feasible with official APIs.** Instagram Business Discovery reads public posts of business and creator accounts (venues almost always are). Facebook Pages need Page Public Content Access, which requires Meta's app review. | Scraping breaks Meta's terms; don't. Captions are messy, so the parser drafts and a person confirms, or the feed only keeps posts with a clear date, city and tags. |
+| Wider event and venue coverage | **The hard part.** The demo uses sample data. | Combine listings and ticketing sources (Eventbrite, Resident Advisor, Dice, local guides) and venue data (Google Places, Foursquare). The long tail needs the post path above and people sharing. |
+| Products | **Feasible with affiliate and retailer feeds**, including stock and sale data where shared. | Affiliate revenue is the obvious business model. |
+| Interpretation quality | Rules and associations in v1. | Next: text and image embeddings, or an LLM that maps a save (caption, image) into the shared vocabulary with a tier. Scoring stays the same. |
+| Privacy | Saves are private. Friends see only spots you saved or added. | Import just the saves files from an export; never ask for passwords to other apps. |
+
+## 8. Architecture
 
 ```
 web/ (React + Vite SPA)  ──/api──▶  server/ (Node + Express)
                                        ├─ SQLite (node:sqlite, a single file)
-                                       ├─ recommender.js (pure functions, unit-tested)
-                                       └─ providers/ TMDB · Open Library · MusicBrainz
+                                       ├─ taste-graph.js, occasions.js, posts.js (pure, unit-tested)
+                                       └─ providers/venue-posts.js (optional)
 ```
 
-- **Why this stack:** one language, no native build steps, a database in a
-  single file, and it runs anywhere Node 22 runs. You can move to Postgres later
-  by swapping `db.js`.
-- **Auth:** username and password (scrypt), plus an opaque session token in an
-  httpOnly cookie.
-- **External data:** catalogue providers are optional. Without keys the app
-  uses a built-in seed catalogue. With `TMDB_API_KEY` set, search and Radar pull
-  real film and TV data, including upcoming and in-production titles.
-  Imported genres map to moods automatically (`server/taxonomy.js`).
+One language, no native build steps, a database in a single file. Moving to
+Postgres later means swapping `db.js`. Auth is username and password
+(scrypt) with an opaque session token in an httpOnly cookie.
 
-## 7. Privacy and sharing
+## 9. Roadmap
 
-- Reviews and library entries are visible only to accepted friends. Lists have
-  their own visibility setting.
-- Friendships are mutual and need an explicit accept.
-- No tracking, and nothing is sent to third parties except search queries to
-  the catalogue APIs you enable.
-
-## 9. Taste graph: saves from everywhere → what's next
-
-### The problem
-
-You save constantly and use almost none of it. Songs on Spotify, outfits and
-pastry accounts on Instagram, bars on Google Maps, rooms on Pinterest: four
-fragments of one taste, each locked in an app that only recommends from its
-own catalogue. Then you plan a trip to Bangkok and forget the jazz café you
-starred two years ago, or you're home wondering what to do tomorrow and only
-the big events reach you. The small thing you'd love is never pushed to you.
-
-### Two layers, built in order
-
-| Layer | What it is | Where |
-|---|---|---|
-| **A. My saves, connected** | Saves from every app land in one list, tagged with a shared vocabulary (song, place, look, food… plus vibes: *jazz, intimate, moody, pastry, tailoring*). Recurring combinations become visible **patterns**: "moody · dark · atmospheric: 1 song, 2 looks, 1 place, 1 artwork from Spotify, Instagram, Maps and Pinterest". | `/saves`, `server/taste-graph.js` `findPatterns` |
-| **B. Taste → action** | One profile from all saves (plus your film/music moods at half weight) ranks real **spots** (events, places, products) for a city and dates. Every pick says *which of your saves* point to it. | `/next`, `rankSpots` |
-
-B only works once A exists; that's why import and tagging come first.
-
-### How it works
-
-- **Import** (`server/importers.js`). The platforms offer no "read my saves"
-  API, but all of them let you download your own data. We parse those
-  exports, accepting several shapes because the formats drift over time:
-  Spotify `YourLibrary.json`, Instagram `saved_collections.json` /
-  `saved_posts.json`, Google Takeout `Saved Places.json` or list CSVs, and
-  pasted lines for Pinterest. Re-importing is idempotent (`UNIQUE(user, source, key)`).
-- **Tagging** (`taxonomy.js` `autoTag`). Keyword rules over title, creator,
-  collection name and note map onto shared tags. Music genres carry their
-  moods across, so a jazz track is also *chill* and *cerebral*, the same
-  words a listening bar is tagged with. Songs by artists already in the
-  catalogue inherit their genres and moods. Users can retag anything.
-- **Profile** = Σ over saves of `1/√(#tags)` per tag, plus media `mood:`/`genre:`
-  weights scaled to `0.5 × w/max`.
-- **Spot score** `= 0.6·cosine(profile, spot) + 0.2·tanh(0.6·friends who saved it)
-  + 0.1·just opened (≤ 60 days) + 0.1·(1 − popularity)`. The last term is
-  deliberate: it favours the **under-the-radar** things you'd never see
-  advertised.
-- **Filters:** city (products with no city ship anywhere), and events must
-  overlap the date range (Tomorrow / This weekend / Next 2 weeks / Trip dates).
-- **Explanations** come from your own saves, grouped by app:
-  *"jazz: 4 on Spotify, 2 on Google Maps, like 'Jazz café with a record wall'"*,
-  *"Maya saved it"*, *"Just opened, 9 days ago"*.
-- **"You already saved these in Bangkok"**: your own saves in the chosen city,
-  shown first, which is the trip-planning memory the problem describes.
-- Saving a spot turns it into a save (`source = tastemate`), so acting feeds
-  the graph. Dismissing hides it.
-
-### Data model additions
-
-```
-spots(id, kind[event|place|product], title, city, venue, creators[], tags[], description,
-      starts_at, ends_at, opened_at, price, url, popularity 0..1, source, external_id, is_demo)
-saves(id, user_id, kind, title, creator, source[spotify|instagram|google_maps|pinterest|manual|tastemate],
-      collection, url, note, city, tags[], spot_id?, external_key, saved_at)
-spot_dismissals(user_id, spot_id)
-user_settings(user_id, home_city)
-```
-
-### Honest feasibility
-
-| Piece | Status today | Notes |
-|---|---|---|
-| Spotify saves | **Feasible.** Export works now; the Web API (`/me/tracks`, OAuth) can sync live. | The API's artist genres would replace the keyword guessing for songs. New apps start in a limited development mode and need Spotify's approval for wider access. |
-| Instagram saves | **Export only.** No API exposes saved posts. | The export has the account and link but **no caption or image**, so collection names carry most of the signal. Next step: fetch public post metadata or let people share posts into the app (share sheet), then tag the image with a vision model. |
-| Google Maps saves | **Export only** (Takeout). No API for starred places. | Gives name, address and URL, which is plenty. The Places API can then add categories and opening hours. |
-| Pinterest | **Feasible** via API v5 (boards and pins, OAuth); paste works today. | |
-| Events and venues ("spots") | **The hard part.** The demo uses sample data. | Real coverage means combining ticketing and listings APIs (e.g. Ticketmaster, Eventbrite, Resident Advisor, Dice, local listing sites) and venue data (Google Places, Foursquare). Small and new places are exactly the long tail these sources miss, so curation, partnerships and user-submitted spots matter. |
-| Products | **Feasible with affiliate feeds** (retailer and affiliate-network product feeds), with stock and sale data where retailers share it. | Affiliate revenue is also the obvious business model. |
-| Tagging quality | Keyword rules are the v1. | Next: text and image embeddings, or an LLM that tags a save from its caption or image into the shared vocabulary. Cosine scoring stays the same. |
-| Privacy | Saves stay private. Only spot saves are visible to friends, as a reason. | Exports contain personal data, so import only the saves files and keep them on the server. |
-
-## 10. Roadmap
-
-**MVP (this build):** everything in §3, plus the seed catalogue and demo friends.
-
-**Next:**
-- Taste graph: live Spotify and Pinterest sync over OAuth, a share-sheet
-  "save to Tastemate" for Instagram posts and links, real event and venue
-  feeds per city, and image and LLM tagging (see §9 *Honest feasibility*).
-- Notifications for "a show you'd love is on near you this week".
-- Scheduled sync of upcoming releases from TMDB, MusicBrainz and publishers, with
-  notifications when something on your watchlist releases or gets a date.
-- Import history from Letterboxd, Goodreads, Last.fm and Trakt (CSV/API), the
-  fastest cure for cold start.
-- "Where to watch / listen" links (JustWatch-style availability, Spotify links).
-- Group mode: "pick a film for the four of us tonight" (intersection of profiles).
-- Embedding-based similarity on synopses and lyrics; LLM-written "why you'll like
-  this" blurbs.
-- Mobile app (React Native) and push notifications.
-- Postgres plus hosted deployment, invite links, and moderation and reporting
-  for public lists.
+- Live Spotify and Pinterest sync over OAuth; a share-sheet "save to
+  Tastemate" for Instagram posts and any link.
+- Image and LLM reading of saves into the shared vocabulary, with tiers.
+- Real event, venue and product feeds per city.
+- Notifications: "a show you'd love is on near you this week".
+- Group mode: plan a night for several people from the overlap of their clusters.
+- Mobile app, Postgres and hosted deployment.

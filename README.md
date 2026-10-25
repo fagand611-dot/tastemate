@@ -1,17 +1,16 @@
 # ✦ Tastemate
 
-Cross-media taste profiles for **film, TV, music and books**: recommendations
-that explain themselves, a radar of upcoming releases, and lists, reviews and
-scores shared with friends.
+Everything you save on **Spotify, Instagram, Google Maps and Pinterest**,
+connected into one taste, and turned into *what should I do, buy or go to
+next*: at home tomorrow, on a trip to Bangkok, or when you're having people
+over tonight.
 
-**Taste graph:** import what you've saved on Spotify, Instagram, Google Maps
-and Pinterest (**Saves**), see the patterns running across them, and get
-events, places and things to buy picked for a city and dates (**Next**),
-each explained by your own saves. The demo account comes with sample saves,
-and sample spots in Bangkok, London, Dublin and Tokyo.
+The feature at its heart is the **taste graph**: Tastemate reads every save
+as a whole (not just what's labelled) and builds clusters of taste from what
+your saves say outright, what they mean, and what they could be.
 
-See [DESIGN.md](DESIGN.md) for the product thinking, the recommendation model,
-the data model and the roadmap.
+See [DESIGN.md](DESIGN.md) for the product thinking, the model, the data
+model and an honest feasibility check.
 
 ## Quick start
 
@@ -23,9 +22,9 @@ npm run seed -- --demo   # optional: demo friends (maya, sam, jo) and a `demo` l
 npm run dev              # API on :3001, app on http://localhost:5173
 ```
 
-Sign in as `demo` / `demo1234` to see a profile with friends, a feed and lists
-already set up, or create your own account and go through onboarding. To try
-the social features with your own account, add `maya`, `sam` or `jo` as friends.
+Sign in as `demo` / `demo1234` to see 23 sample saves from four apps,
+friends, and sample spots in Bangkok, London, Dublin and Tokyo. Or create
+your own account and import your own saves.
 
 ### If something looks out of date or broken
 
@@ -49,30 +48,42 @@ npm run build && npm start   # serves the API and the built app on :3001
 |---|---|---|
 | `PORT` | `3001` | HTTP port |
 | `DB_FILE` | `data/tastemate.db` | SQLite file |
-| `TMDB_API_KEY` | *(unset)* | Enables film/TV search and real upcoming releases on Radar ([get a key](https://www.themoviedb.org/settings/api)) |
-| `OPENLIBRARY` | on | Set to `off` to disable book search |
-| `MUSICBRAINZ` | on | Set to `off` to disable album search |
-| `MUSICBRAINZ_UA` | Tastemate UA | User-Agent that MusicBrainz requires |
+| `IG_USER_ID` | *(unset)* | Your Instagram business account ID, for the venue feed |
+| `IG_ACCESS_TOKEN` | *(unset)* | A Meta Graph API token with `instagram_basic` |
+| `VENUE_ACCOUNTS` | *(unset)* | Venues to follow, e.g. `Dublin:workmansclub,Bangkok:studiolam` |
+
+Without the three `IG_` / `VENUE_` variables the venue feed is off; pasting
+posts still works.
 
 ## What's in it
 
-- **Onboarding:** pick genres and moods per medium, then rate a few well-known titles.
-- **For You:** the home page. One top pick, then themed rows that each say why
-  they're there: *New in your circle* (friends' recent high ratings),
-  *Because you loved X*, *The feel of X, beyond the screen* (the same mood in
-  another medium), *In a dark mood*, *Coming soon for you*, *Classics you
-  haven't got to*, *Fresh from your friends' lists* and *Something different*.
-  Featured favourites and moods rotate daily.
-- **Browse:** the full ranked list from a hybrid recommender (taste profile, friends weighted by taste
-  similarity, and community quality) with a diversity re-rank so media and genres
-  mix. Each card says why it was picked.
-- **Radar:** upcoming, announced and in-production titles ranked by your taste, with a watchlist.
-- **Search:** the local catalogue plus TMDB, Open Library and MusicBrainz. Import
-  results, or add anything by hand.
-- **Library:** rate (1–10), review, want, in progress, or mark as not for me.
-- **Lists:** mixed-media lists with notes, visible to just you, friends, or everyone.
-- **Friends:** mutual friendships, a taste-match %, profiles, and a **feed**.
-- **Taste DNA:** see what drives your recommendations, and boost or ban tags.
+- **Saves:** import the data export from each app (Spotify `YourLibrary.json`,
+  Instagram `saved_collections.json`, Google Takeout `Saved Places.json` or
+  list CSVs, pasted Pinterest pins), or add a save by hand. Every save is
+  tagged automatically and you can retag anything.
+- **Taste clusters:** recurring tastes that run across your apps, e.g.
+  *jazz · chill · cerebral*, each with its evidence in three tiers:
+  - **Obvious:** says it outright ("Jazz café with a record wall").
+  - **Translated:** means it without saying it ("Vinyl listening bar",
+    a Miles Davis track, "@bluenote.records").
+  - **Could be:** goes with it, or matches your habits ("most of your
+    intimate saves are also jazz").
+- **Next:** pick a city and Tomorrow, This weekend, Next 2 weeks or trip
+  dates. Get events, places and things to buy, each explained by your own
+  saves ("jazz: 4 on Spotify, 2 on Google Maps"), what friends saved, what
+  just opened, and a boost for **under-the-radar** spots. Your own saves in
+  that city come first, so a trip never forgets the café you starred years ago.
+- **Events from posts:** paste a venue's Instagram or Facebook post and
+  Tastemate reads the date, time, venue, city and price into an event
+  for you to check. Friends see it too. Optionally follow venue accounts
+  through Instagram's Business Discovery API.
+- **Host:** pick an occasion (dinner party, house party, date night,
+  birthday, brunch) and get one theme from your clusters, with wine,
+  cocktails, a zero-proof drink, food, a playlist from your own saves, an
+  invitation styled in the theme, a moodboard of your saves, and where to
+  pick things up in your city.
+- **Friends:** mutual friendships with a taste-match %. When a friend saves
+  a spot, it shows up in your Next with their name on it.
 
 ## Project layout
 
@@ -80,15 +91,16 @@ npm run build && npm start   # serves the API and the built app on :3001
 server/
   app.js            Express app (createApp is used by the tests too)
   db.js             schema + helpers (node:sqlite)
-  recommender.js    pure scoring / ranking / explanations
-  shelves.js        arranges scores into the For You page's themed rows
-  taxonomy.js       genres, moods, genre→mood map, provider genre aliases
-  services.js       shared queries (library, friends, profiles)
-  routes/           auth, items + library, discover (recs/radar/taste/onboarding), social, home
-  providers/        tmdb, openlibrary, musicbrainz
-  seed/             starter catalogue + demo users
-web/src/            React SPA (pages/, components/ui.jsx, styles.css)
-test/               node:test tests for the recommender, providers (mocked) and API
+  taxonomy.js       shared tag vocabulary, keyword rules, readSignals()
+  taste-graph.js    interpret saves, profile, clusters, rank spots (pure)
+  importers.js      parse each app's data export into saves
+  posts.js          read a venue post into an event draft
+  occasions.js      plan an occasion from a cluster (pure)
+  routes/           auth, friends, saves (saves, graph, next, spots, occasion)
+  providers/        venue-posts (Instagram Business Discovery)
+  seed/             sample spots and demo users
+web/src/            React SPA (pages/, components/, styles.css)
+test/               node:test tests: graph, importers, posts, occasions, API
 ```
 
 ## Tests
