@@ -479,8 +479,8 @@ const WEB = [
   { key: 'food', label: 'Food & drink', test: (t) => facetOf(t) === 'food' || ['wine bar', 'cocktails', 'coffee', 'pastry'].includes(t) },
   { key: 'nights', label: 'Nights out', test: (t) => ['night out', 'late night', 'live music', 'comedy', 'speakeasy', 'rooftop', 'cocktails', 'wine bar', 'lively', 'high-energy'].includes(t) },
   { key: 'culture', label: 'Art & culture', test: (t) => ['art', 'gallery', 'contemporary art', 'photography', 'architecture', 'design', 'craft', 'books', 'film', 'cinema', 'dark academia', 'classical'].includes(t) },
-  { key: 'style', label: 'Style', test: (t) => ['tailoring', 'vintage', 'minimal', 'outerwear', 'linen', 'streetwear', 'classic', 'dark academia'].includes(t) },
-  { key: 'travel', label: 'Travel', test: (t) => facetOf(t) === 'place' },
+  { key: 'style', label: 'Style', test: (t) => ['tailoring', 'vintage', 'minimal', 'outerwear', 'linen', 'streetwear', 'classic', 'dark academia', 'fashion', 'interiors', 'beauty'].includes(t) },
+  { key: 'travel', label: 'Travel', test: (t) => facetOf(t) === 'place' || ['travel', 'hotel'].includes(t) },
 ];
 
 /**

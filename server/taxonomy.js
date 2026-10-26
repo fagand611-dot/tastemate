@@ -78,7 +78,9 @@ export const VIBE_KEYWORDS = {
   blues: ['jazz', 'emotional'],
   soul: ['soul', 'emotional'],
   techno: ['techno', 'high-energy', 'dark'],
-  house: ['house', 'high-energy'],
+  // Not plain "house": captions say "house tour" far more than they mean the music.
+  'house music': ['house', 'high-energy'],
+  'house party': ['house', 'lively', 'night out'],
   'deep house': ['house', 'chill'],
   disco: ['house', 'high-energy', 'nostalgic'],
   vinyl: ['vinyl', 'vintage'],
@@ -200,6 +202,49 @@ export const VIBE_KEYWORDS = {
   tea: ['cozy'],
   'string quartet': ['classical', 'intimate'],
   orchestra: ['classical', 'epic'],
+  // Life beyond music and food, as people save it on Instagram and Pinterest.
+  wedding: ['wedding', 'romantic', 'luxe@0.4'],
+  bridal: ['wedding', 'romantic'],
+  bride: ['wedding', 'romantic'],
+  golf: ['golf', 'sport', 'outdoors@0.6'],
+  tennis: ['tennis', 'sport'],
+  pilates: ['wellness', 'sport@0.5'],
+  wellness: ['wellness', 'chill@0.5'],
+  skincare: ['wellness', 'beauty'],
+  meditation: ['wellness', 'chill'],
+  'interior design': ['interiors', 'design'],
+  interior: ['interiors', 'design@0.6'],
+  'home decor': ['interiors', 'design', 'cozy@0.5'],
+  'house tour': ['interiors', 'design'],
+  condo: ['interiors'],
+  apartment: ['interiors@0.6'],
+  furniture: ['interiors', 'design'],
+  kitchen: ['interiors@0.5', 'cooking@0.5'],
+  recipe: ['cooking', 'food'],
+  'home cooking': ['cooking', 'food', 'cozy@0.5'],
+  baking: ['cooking', 'pastry'],
+  vegan: ['vegan', 'food'],
+  dessert: ['pastry', 'food'],
+  burger: ['food', 'casual'],
+  'fried rice': ['food', 'casual'],
+  fashion: ['fashion'],
+  outfit: ['fashion'],
+  ootd: ['fashion'],
+  couture: ['fashion', 'luxe'],
+  'quiet luxury': ['fashion', 'luxe', 'minimal'],
+  hotel: ['hotel', 'travel', 'luxe@0.4'],
+  resort: ['hotel', 'travel', 'luxe@0.5'],
+  itinerary: ['travel'],
+  'road trip': ['travel', 'outdoors'],
+  'travel guide': ['travel'],
+  reading: ['books', 'cozy@0.5'],
+  novel: ['books', 'cerebral@0.5'],
+  'book club': ['books', 'cerebral'],
+  bookstagram: ['books'],
+  ceramic: ['art', 'craft', 'minimal'],
+  pottery: ['craft', 'art@0.6'],
+  crochet: ['craft', 'cozy'],
+  knitting: ['craft', 'cozy'],
 };
 
 // Indirect links between tags: things that often go with a taste without
@@ -237,7 +282,7 @@ export const ASSOCIATIONS = {
 const KIND_HINTS = [
   ['place', ['wine bar', 'coffee', 'cocktails', 'rooftop', 'gallery', 'bookshop', 'market', 'park']],
   ['food', ['pastry', 'food', 'street food']],
-  ['look', ['tailoring', 'outerwear', 'streetwear', 'dark academia']],
+  ['look', ['tailoring', 'outerwear', 'streetwear', 'dark academia', 'fashion', 'wedding']],
   ['art', ['art', 'photography', 'architecture']],
 ];
 
@@ -259,7 +304,7 @@ const HANDLE_WORDS = Object.entries(VIBE_KEYWORDS)
 export const FACETS = ['artist', 'sound', 'food', 'vibe', 'place', 'time', 'price', 'era', 'thing'];
 const VIBES = new Set(['casual', 'dark', 'tense', 'cerebral', 'emotional', 'uplifting', 'funny', 'romantic', 'atmospheric', 'high-energy', 'chill', 'epic', 'weird', 'nostalgic', 'gritty', 'moody', 'intimate', 'cozy', 'lively', 'warm', 'minimal', 'vintage', 'luxe', 'classic', 'hidden gem']);
 const SOUNDS = new Set([...MUSIC_GENRES, ...Object.keys(SOUND_PARENTS), 'poetry']);
-const FOODS = new Set(['food', 'pastry', 'coffee', 'street food', 'thai', 'noodles', 'pizza', 'japanese', 'wine bar', 'cocktails']);
+const FOODS = new Set(['food', 'pastry', 'coffee', 'street food', 'thai', 'noodles', 'pizza', 'japanese', 'wine bar', 'cocktails', 'cooking', 'vegan']);
 const TIMES = new Set(['night out', 'daytime']);
 const PRICES = new Set(['budget', 'splurge']);
 const PLACES = new Set([
@@ -316,11 +361,14 @@ export function readSignals({ title, creator, collection, note } = {}, cache = n
   }
   // Cities named in the text ("Bangkok trip") are places.
   for (const [re, city] of PLACE_RES) if (re.test(s)) put(city, 'obvious', city, 'place');
-  // Genres only from short phrases ("Pink Moon · folk"), never mid-sentence,
-  // so "pop-up" or "the house special" don't count as music.
-  const phrases = s.toLowerCase().split(/[·,/|\n]/).map((x) => x.trim()).filter((x) => x && x.split(/\s+/).length <= 3);
-  for (const g of new Set(phrases.map(normalizeGenre).filter(Boolean))) {
-    if (!phrases.some((x) => new RegExp(`(^|[^a-z-])${g}([^a-z-]|$)`).test(x) || x === g)) continue;
+  // Genres only from short phrases in the title, artist or collection ("Pink
+  // Moon · folk"), never mid-sentence or from a caption, so "pop-up" or a
+  // caption line "House tour" don't count as music.
+  const phrases = [title, creator, collection].filter(Boolean).join(' · ').toLowerCase().split(/[·,/|\n]/).map((x) => x.trim()).filter(Boolean);
+  // A phrase is a genre label when it is one ("folk"), an alias ("neo soul"),
+  // or a genre with one word before it ("deep house"), not "our house tour".
+  const asGenre = (x) => (MUSIC_GENRES.includes(x) || ALIASES[x] || (/^\S+ \S+$/.test(x) && MUSIC_GENRES.some((g) => x.endsWith(` ${g}`))) ? normalizeGenre(x) : null);
+  for (const g of new Set(phrases.map(asGenre).filter(Boolean))) {
     put(g, 'obvious', g);
     for (const m of moodsForGenres([g])) put(m, 'translated', `${g} is ${m}`);
   }

@@ -319,3 +319,20 @@ test('friends show their Tastemate title; Host invites them; places carry photos
   assert.ok(all.some((x) => x.spot.kind === 'place' && /^https:\/\//.test(x.spot.image)), 'sample places have photos');
   assert.ok((await me.get('/you')).body.collage.bag.length > 0);
 });
+
+test('instagram: importing posts then collections fills in the collection, without doubling anything', async () => {
+  const me = await signup('igmerge');
+  const posts = JSON.stringify([{ timestamp: 1, label_values: [
+    { label: 'URL', href: 'https://www.instagram.com/p/ZZZ/' }, { label: 'Caption', value: 'Almond croissant meets muffin' },
+    { dict: [{ dict: [{ label: 'Username', value: 'bakerydiaries' }], title: '' }], title: 'Owner' },
+  ] }]);
+  const cols = JSON.stringify([{ timestamp: 1, label_values: [{ label: 'Name', value: 'Feed this fatty' }, { dict: [{ dict: [{ label: 'URL', href: 'https://www.instagram.com/p/ZZZ/' }], title: '' }], title: 'Media' }] }]);
+  assert.equal((await me.post('/saves/import', { source: 'instagram', text: posts })).body.added, 1);
+  const second = (await me.post('/saves/import', { source: 'instagram', text: cols })).body;
+  assert.deepEqual([second.added, second.updated], [0, 1]);
+  const [s] = (await me.get('/saves')).body.saves;
+  assert.equal(s.collection, 'Feed this fatty');
+  assert.equal(s.creator, '@bakerydiaries', 'what the first file knew stays');
+  assert.ok(s.tags.includes('pastry'));
+  assert.equal((await me.post('/saves/import', { source: 'instagram', text: cols })).body.skipped, 1, 'a third time changes nothing');
+});

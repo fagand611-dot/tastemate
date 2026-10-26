@@ -23,7 +23,7 @@ export function parseImport(source, text, { cities = [] } = {}) {
   const json = raw.startsWith('{') || raw.startsWith('[') ? tryJson(raw) : null;
   const rows =
     source === 'spotify' ? spotify(json, raw)
-    : source === 'instagram' ? instagram(json, raw)
+    : source === 'instagram' ? instagram(json && fixMojibake(json), raw, cities)
     : source === 'google_maps' ? googleMaps(json, raw, cities)
     : source === 'pinterest' ? lines(raw, 'look')
     : null;
@@ -127,8 +127,9 @@ function uriToUrl(uri) {
 // The export has no captions, only the account and the link, so the account
 // name and your collection names are the signal. Naming collections well
 // ("Pastry", "Coats") makes a big difference.
-function instagram(json, raw) {
+function instagram(json, raw, cities = []) {
   if (!json) return lines(raw, 'other', (l) => (/^https?:/.test(l) ? { title: 'Instagram post', url: l } : { title: l }));
+  if (Array.isArray(json) && json.some((e) => Array.isArray(e?.label_values))) return instagramLabelled(json, cities);
   const out = [];
   let collection = null;
   const visit = (entry) => {
@@ -159,6 +160,81 @@ function instagram(json, raw) {
     list.forEach(visit);
   }
   return out;
+}
+
+// Instagram's newer download (2025 on): every file is a list of entries made
+// of { label, value } pairs, with nested sections ({ title, dict }).
+//   saved_posts.json        URL, Caption, and an Owner section (Username, Name)
+//   saved_collections.json  Name, then a Media section listing that collection's posts
+//   saved_music.json        Title, Artist (saved audio)
+function labelled(list) {
+  const m = {};
+  const sections = {};
+  for (const x of list || []) {
+    if (x.label && !(x.label in m)) m[x.label] = x;
+    if (x.dict && x.title) sections[x.title] = x.dict;
+  }
+  return { m, sections };
+}
+
+/** The caption's first real line, without hashtags, as a title. */
+function captionTitle(caption, owner) {
+  const line = String(caption || '').split('\n').map((l) => l.replace(/#[^\s#]+/g, '').replace(/\s+/g, ' ').trim()).find((l) => l.length > 2);
+  if (!line) return owner ? `@${owner}` : 'Instagram post';
+  return line.length > 100 ? `${line.slice(0, 97).replace(/\s+\S*$/, '')}…` : line;
+}
+
+function instagramLabelled(entries, cities) {
+  const out = [];
+  const post = (fields, owner, collection, ts) => {
+    const url = fields.URL?.href || fields.URL?.value;
+    if (!url) return;
+    const caption = fields.Caption?.value || '';
+    out.push({
+      kind: 'other',
+      title: captionTitle(caption, owner),
+      creator: owner ? `@${owner}` : null,
+      collection,
+      note: caption ? caption.slice(0, 400) : null,
+      city: cityFrom(caption, cities),
+      url,
+      external_key: url,
+      saved_at: ts ? new Date(ts * 1000).toISOString() : null,
+    });
+  };
+  for (const e of entries) {
+    const { m, sections } = labelled(e.label_values);
+    if (m.Artist) {
+      // Saved audio.
+      if (!m.Title?.value) continue;
+      out.push({ kind: 'song', title: m.Title.value, creator: m.Artist.value || null, collection: 'Saved on Instagram', external_key: `igmusic:${e.fbid || `${m.Artist.value}|${m.Title.value}`}`, saved_at: e.timestamp ? new Date(e.timestamp * 1000).toISOString() : null });
+    } else if (m.Name && sections.Media) {
+      // A collection, with its posts.
+      const name = String(m.Name.value || '').trim();
+      const collection = name && !name.includes('\ufffd') ? name : null;
+      for (const item of sections.Media) post(labelled(item.dict).m, null, collection, e.timestamp);
+    } else if (m.URL) {
+      const owner = labelled(sections.Owner?.[0]?.dict).m.Username?.value || null;
+      post(m, owner, null, e.timestamp);
+    }
+  }
+  return out;
+}
+
+/**
+ * Instagram writes its JSON with UTF-8 bytes escaped one by one, so "é"
+ * arrives as "Ã©" and emoji as "ð". Put text back together
+ * wherever it's that kind of string.
+ */
+export function fixMojibake(x) {
+  if (typeof x === 'string') {
+    if (!/[\u0080-\u00ff]/.test(x) || /[^\u0000-\u00ff]/.test(x)) return x;
+    const fixed = Buffer.from(x, 'latin1').toString('utf8');
+    return fixed.includes('\ufffd') ? x : fixed;
+  }
+  if (Array.isArray(x)) return x.map(fixMojibake);
+  if (x && typeof x === 'object') return Object.fromEntries(Object.entries(x).map(([k, v]) => [k, fixMojibake(v)]));
+  return x;
 }
 
 // ----- Google Maps -----

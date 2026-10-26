@@ -42,6 +42,54 @@ test('importers: Spotify CSVs (liked songs, playlist tracks, Exportify), columns
   assert.equal(parseImport('spotify', 'Nick Drake - Pink Moon')[0].creator, 'Nick Drake', 'plain lines still work');
 });
 
+test('importers: Instagram 2025 downloads (labelled entries), with the text put back together', () => {
+  const posts = JSON.stringify([{
+    timestamp: 1792951186,
+    media: [],
+    label_values: [
+      { label: 'URL', value: 'https://www.instagram.com/p/AAA/', href: 'https://www.instagram.com/p/AAA/' },
+      // Instagram writes UTF-8 bytes one by one: "Château" and an emoji.
+      { label: 'Caption', value: '#weddingday\nA weekend at ChÃ¢teau FontarÃ¨ches ð\u009f\u008c¸\nin Bangkok' },
+      { label: 'Title', value: '' },
+      { dict: [], title: 'Hashtags' },
+      { dict: [{ dict: [{ label: 'Username', value: 'thebridaljourney' }, { label: 'Name', value: 'The Bridal Journey' }], title: '' }], title: 'Owner' },
+    ],
+  }]);
+  const [p] = parseImport('instagram', posts, { cities: ['Bangkok'] });
+  assert.equal(p.title, 'A weekend at Château Fontarèches 🌸', 'first real line, hashtags out, accents and emoji back');
+  assert.equal(p.creator, '@thebridaljourney');
+  assert.equal(p.city, 'Bangkok');
+  assert.equal(p.external_key, 'https://www.instagram.com/p/AAA/');
+  assert.equal(p.saved_at, new Date(1792951186000).toISOString());
+
+  const cols = JSON.stringify([{
+    timestamp: 1790109160,
+    label_values: [
+      { label: 'Name', value: 'Feed this fatty ' },
+      { label: 'Type', value: 'Default' },
+      { dict: [
+        { dict: [{ label: 'URL', href: 'https://www.instagram.com/p/AAA/' }, { label: 'Caption', value: 'x' }], title: '' },
+        { dict: [{ label: 'URL', href: 'https://www.instagram.com/reel/BBB/' }, { label: 'Caption', value: 'Almond croissant meets muffin' }], title: '' },
+      ], title: 'Media' },
+    ],
+  }]);
+  const c = parseImport('instagram', cols);
+  assert.deepEqual(c.map((x) => [x.external_key, x.collection]), [['https://www.instagram.com/p/AAA/', 'Feed this fatty'], ['https://www.instagram.com/reel/BBB/', 'Feed this fatty']]);
+
+  const music = parseImport('instagram', JSON.stringify([{ timestamp: 1, fbid: '9', label_values: [{ label: 'Title', value: 'í\u0095´ë°\u0094ë\u009d¼ê¸°' }, { label: 'Artist', value: 'Lee Moon Sae' }] }]));
+  assert.deepEqual([music[0].kind, music[0].title, music[0].creator, music[0].external_key], ['song', '해바라기', 'Lee Moon Sae', 'igmusic:9']);
+});
+
+test('taxonomy: "house" in a caption is a home, not house music; lifestyle words count', () => {
+  assert.ok(!autoTag('Our house tour', null, null, 'A peek inside our new house').includes('house'));
+  assert.ok(autoTag('Our house tour').includes('interiors'));
+  assert.ok(autoTag('Deep house all night').includes('house'));
+  assert.ok(autoTag('Sunset set', null, 'house').includes('house'), 'a genre as a collection still counts');
+  assert.ok(!autoTag('Sunset', null, null, 'Saturday\nHouse\nparty').includes('house'), 'short caption lines are not genres');
+  assert.ok(autoTag('Golf outfit inspo').includes('golf'));
+  assert.ok(autoTag('Bridal look', null, 'Wedding').includes('wedding'));
+});
+
 test('importers: Instagram collections carry their names onto posts', () => {
   const json = {
     saved_saved_collections: [
