@@ -7,6 +7,7 @@ import { useActions } from '../components/actions.jsx';
 import { Empty, Loading, PageHead, useApi } from '../components/ui.jsx';
 import { Dialog } from '../components/viz.jsx';
 import { useAuth } from '../App.jsx';
+import { postcardNote } from '../components/postcardNote.js';
 import TasteArt, { hasArt } from '../components/TasteArt.jsx';
 import { hash, wesFor } from '../components/Retro.jsx';
 
@@ -336,8 +337,6 @@ function WhyDialog({ spot, match, reasons, onClose }) {
   );
 }
 
-const andList = (l) => (l.length > 1 ? `${l.slice(0, -1).join(', ')} and ${l[l.length - 1]}` : l[0] || '');
-
 /**
  * Why we picked it, as a postcard rather than a chart: the place on the
  * front, and on the back a handwritten note in plain words, naming the
@@ -345,23 +344,7 @@ const andList = (l) => (l.length > 1 ? `${l.slice(0, -1).join(', ')} and ${l[l.l
  */
 function Postcard({ spot, match, reasons }) {
   const { user } = useAuth();
-  const get = (t) => reasons.find((r) => r.type === t);
-  const ev = get('saves')?.evidence || [];
-  const tags = ev.length ? ev.map((e) => e.tag) : get('tags')?.tags || [];
-  const examples = [...new Set(ev.flatMap((e) => e.examples))].slice(0, 2);
-  const apps = [...new Set(ev.flatMap((e) => e.sources.map((x) => x.label)))].slice(0, 2);
-  const lines = [];
-  const st = get('stretch');
-  if (st) lines.push(`This one’s a little stretch: ${andList(st.tags) || 'something new'}${st.why ? `, ${st.why}` : ''}. Go on.`);
-  if (tags.length) lines.push(`It’s ${andList(tags.slice(0, 3))}, which is very you.`);
-  if (examples.length) lines.push(`Think “${examples.join('” and “')}”${apps.length ? `, from your ${andList(apps)}` : ''}.`);
-  const cr = get('creator');
-  if (cr?.name) lines.push(`And it’s ${cr.name}, who you already love.`);
-  const fr = get('friends');
-  if (fr) lines.push(`${andList(fr.names)} saved it too.`);
-  if (get('new')) lines.push('It only just opened.');
-  if (get('gem')) lines.push('Hardly anyone knows about it yet.');
-  if (!lines.length) lines.push('It just felt like you.');
+  const note = postcardNote({ spot, reasons, name: user.display_name.split(' ')[0] });
   const where = spot.city || 'Anywhere';
   const today = new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' }).toUpperCase();
   return (
@@ -372,9 +355,9 @@ function Postcard({ spot, match, reasons }) {
       </div>
       <div className="postcard-back">
         <div className="postcard-note">
-          <p>Dear {user.display_name.split(' ')[0]},</p>
-          {lines.map((l) => <p key={l}>{l}</p>)}
-          <p className="postcard-sign">x, your Tastemate</p>
+          <p>{note.greeting}</p>
+          {note.lines.map((l) => <p key={l}>{l}</p>)}
+          <p className="postcard-sign">{note.signoff}</p>
         </div>
         <div className="postcard-side">
           <span className="stamp"><b>{match}%</b><small>you</small></span>
