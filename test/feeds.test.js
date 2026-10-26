@@ -5,6 +5,7 @@ import { createApp } from '../server/app.js';
 import { seedSpots } from '../server/seed/seed.js';
 import { createTicketmaster } from '../server/providers/ticketmaster.js';
 import { createGooglePlaces } from '../server/providers/google-places.js';
+import { createEbay } from '../server/providers/ebay.js';
 
 // Stand-ins for Ticketmaster and Google Places.
 const calls = [];
@@ -155,4 +156,47 @@ test('live feeds: samples step aside only for the kinds a city has live; a faili
 test('live feeds: switched off without keys', () => {
   assert.equal(createTicketmaster({ apiKey: '' }), null);
   assert.equal(createGooglePlaces({ apiKey: undefined }), null);
+});
+
+test('live feeds: things to buy from eBay, for every city, with the sample products stepping aside', async () => {
+  const seen = [];
+  const ebayFetch = async (url, opts = {}) => {
+    const u = new URL(url);
+    seen.push(u.pathname);
+    if (u.pathname === '/identity/v1/oauth2/token') {
+      assert.match(opts.body, /grant_type=client_credentials/);
+      return json({ access_token: 'APP', expires_in: 7200 });
+    }
+    assert.equal(opts.headers.authorization, 'Bearer APP');
+    assert.equal(opts.headers['X-EBAY-C-MARKETPLACE-ID'], 'EBAY_IE');
+    const q = u.searchParams.get('q');
+    if (q !== 'jazz vinyl record') return json({ itemSummaries: [] });
+    return json({ itemSummaries: [
+      { itemId: 'v1', title: 'Miles Davis Kind of Blue LP 180g', price: { value: '24.99', currency: 'EUR' }, image: { imageUrl: 'https://i.ebayimg.example/1.jpg' }, itemWebUrl: 'https://ebay.example/itm/1', condition: 'New' },
+      { itemId: 'v2', title: 'Blue Note jazz record, original pressing', price: { value: '60', currency: 'EUR' }, image: { imageUrl: 'https://i.ebayimg.example/2.jpg' }, itemWebUrl: 'https://ebay.example/itm/2', condition: 'Pre-owned' },
+      { itemId: 'v3', title: 'No photo', price: { value: '5', currency: 'EUR' } },
+    ] });
+  };
+  const db2 = openDb(':memory:');
+  seedSpots(db2);
+  const app = createApp({ db: db2, venueFeed: null, artistLookup: null, feedProviders: [createEbay({ clientId: 'id', clientSecret: 'secret', marketplace: 'EBAY_IE', fetchImpl: ebayFetch, searches: [['jazz vinyl record', ['jazz', 'vinyl']], ['linen shirt', ['linen']]] })] });
+  const s = app.listen(0);
+  await new Promise((r) => s.once('listening', r));
+  const url = `http://localhost:${s.address().port}/api`;
+  const reg = await fetch(`${url}/auth/register`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'shopper', password: 'password123' }) });
+  const cookie = reg.headers.get('set-cookie').split(';')[0];
+  await fetch(`${url}/saves`, { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ title: 'Late night jazz bar' }) });
+  const d = await (await fetch(`${url}/next?city=Dublin`, { headers: { cookie } })).json();
+  assert.ok(d.products.length > 0 && d.products.every((x) => !x.spot.is_demo), 'live products replace the samples');
+  const lp = d.products.find((x) => x.spot.title.startsWith('Miles Davis'));
+  assert.deepEqual([lp.spot.price, lp.spot.venue, lp.spot.city, lp.spot.credit], ['€25', 'On eBay', null, 'Listed on eBay']);
+  assert.ok(d.products.find((x) => x.spot.external_id === 'v2').spot.tags.includes('vintage'), 'secondhand reads as vintage');
+  assert.ok(!d.products.some((x) => x.spot.external_id === 'v3'), 'no photo, no card');
+  assert.equal(d.live.find((f) => f.provider === 'ebay').count, 2);
+  // Another city uses the same fetch: things ship.
+  seen.length = 0;
+  const l = await (await fetch(`${url}/next?city=London`, { headers: { cookie } })).json();
+  assert.equal(seen.length, 0);
+  assert.ok(l.products.some((x) => x.spot.source === 'ebay'));
+  s.close();
 });

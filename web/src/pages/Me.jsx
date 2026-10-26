@@ -20,6 +20,7 @@ export default function Me() {
   const { user, logout, refresh } = useAuth();
   const you = useApi('/you');
   const friends = useApi('/friends');
+  const apps = useApi('/connect');
   const [theme, setTheme] = useTheme();
   const [city, setCity] = useState(user.home_city || '');
   const { toast } = useActions();
@@ -80,12 +81,29 @@ export default function Me() {
 
       <form className="card-plain" onSubmit={saveCity}>
         <span className="label">Home city</span>
-        <p className="muted small">Your perfect day, Next and Host use it when you don’t pick a city.</p>
+        <p className="muted small">Your perfect day, Next and Host use it when you don’t pick a city. Any city works: live events and places are fetched for it.</p>
         <div className="row">
           <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g. Dublin" aria-label="Home city" style={{ flex: 1 }} />
           <button className="btn btn-sm btn-outline">Save</button>
         </div>
       </form>
+
+      {apps.data && (
+        <section className="card-plain">
+          <span className="label">Connected apps</span>
+          <ul className="me-apps">
+            {apps.data.apps.map((a) => (
+              <li key={a.provider}>
+                <b>{a.label}</b>
+                <span className="muted small">
+                  {a.needs_reconnect ? 'Needs connecting again' : a.connected ? `Connected${a.account ? ` as ${a.account}` : ''} · ${a.saves} saves` : a.available ? 'Not connected' : 'Not switched on here yet'}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <Link to="/you/add" className="btn btn-sm btn-outline">Manage apps and imports</Link>
+        </section>
+      )}
 
       <section className="card-plain">
         <span className="label">Appearance</span>

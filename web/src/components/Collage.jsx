@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
+import { saveCollage } from './snapshot.js';
 
 // "Your world, in one picture": what's in your bag and what your room looks
 // like, drawn from your saves, the way people ask a chatbot to picture them.
@@ -389,13 +390,26 @@ function Room({ items, win, name }) {
 /** The two pictures, with a toggle and a line that reflects them back. */
 export default function Collage({ collage, name, title }) {
   const [view, setView] = useState('bag');
+  const [saving, setSaving] = useState(false);
+  const box = useRef(null);
   if (!collage) return null;
+  const save = async () => {
+    setSaving(true);
+    try {
+      await saveCollage(box.current, view, { items: collage[view], name, title, reflection: collage.reflection[view] });
+    } finally {
+      setSaving(false);
+    }
+  };
   return (
-    <div className="collage-wrap">
-      <div className="seg" role="radiogroup" aria-label="Picture">
-        {[['bag', 'In your bag'], ['room', 'Your room']].map(([k, l]) => (
-          <button key={k} role="radio" aria-checked={view === k} className={view === k ? 'on' : ''} onClick={() => setView(k)}>{l}</button>
-        ))}
+    <div className="collage-wrap" ref={box}>
+      <div className="collage-bar">
+        <div className="seg" role="radiogroup" aria-label="Picture">
+          {[['bag', 'In your bag'], ['room', 'Your room']].map(([k, l]) => (
+            <button key={k} role="radio" aria-checked={view === k} className={view === k ? 'on' : ''} onClick={() => setView(k)}>{l}</button>
+          ))}
+        </div>
+        <button className="btn btn-sm btn-outline" onClick={save} disabled={saving}>{saving ? 'Making it…' : 'Save as image'}</button>
       </div>
       {view === 'bag' ? <Bag items={collage.bag} name={name} /> : <Room items={collage.room} win={collage.window} name={name} />}
       {collage.reflection[view] && (

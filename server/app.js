@@ -19,6 +19,7 @@ import { createConnections } from './connect.js';
 import { createFeeds } from './feeds.js';
 import { createTicketmaster } from './providers/ticketmaster.js';
 import { createGooglePlaces } from './providers/google-places.js';
+import { createEbay } from './providers/ebay.js';
 import { createSealer, loadTokenKey } from './secrets.js';
 
 export function createApp({
@@ -27,8 +28,8 @@ export function createApp({
   artistLookup = createArtistLookup(),
   // Apps people can connect; null where this server has no keys for one.
   connectors = { spotify: createSpotify(), instagram: createInstagram() },
-  // Live events and places for Next; none without keys, and Next uses the samples.
-  feedProviders = [createTicketmaster(), createGooglePlaces()],
+  // Live events, places and things to buy for Next; none without keys, and Next uses the samples.
+  feedProviders = [createTicketmaster(), createGooglePlaces(), createEbay()],
   // Only needed (and only made) once there's an app to connect.
   tokenKey = Object.values(connectors).some(Boolean) ? loadTokenKey() : null,
   publicUrl = process.env.PUBLIC_URL,

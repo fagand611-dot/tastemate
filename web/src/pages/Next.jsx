@@ -386,7 +386,7 @@ function Postcard({ spot, match, reasons }) {
   );
 }
 
-const KIND_WORD = { event: 'what’s on', place: 'places' };
+const KIND_WORD = { event: 'what’s on', place: 'places', product: 'things to buy' };
 
 /** Where the picks come from: live feeds, and when, or a note that these are samples. */
 function LiveLine({ live = [], city }) {

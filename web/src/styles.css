@@ -1424,3 +1424,7 @@ h1 { letter-spacing: 0.04em; }
 .live-dot.on { background: #2e9d5b; box-shadow: 0 0 0 3px color-mix(in srgb, #2e9d5b 25%, transparent); animation: breathe 2.4s ease-in-out infinite; }
 .credit { margin: 8px 0 0; font-size: 0.72rem; color: var(--muted); letter-spacing: 0.01em; }
 .ticket .credit { color: #5b4a50; }
+.me-apps { list-style: none; margin: 8px 0 12px; padding: 0; display: grid; gap: 8px; }
+.me-apps li { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.me-apps b { font-family: var(--serif); text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.85rem; }
+.collage-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }

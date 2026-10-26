@@ -66,6 +66,8 @@ folder (copy `.env.example`).
 | `TOKEN_KEY` | a key kept in `data/token.key` | 32-byte hex key that seals connected apps' tokens |
 | `TICKETMASTER_API_KEY` | *(unset)* | Live events in Next ([Ticketmaster Discovery API](https://developer.ticketmaster.com), free) |
 | `GOOGLE_PLACES_API_KEY` | *(unset)* | Live cafés, food, bars, shops and galleries in Next (Places API (New), billed by Google) |
+| `EBAY_CLIENT_ID`, `EBAY_CLIENT_SECRET` | *(unset)* | Live things to buy in Next (eBay Browse API) |
+| `EBAY_MARKETPLACE` | `EBAY_GB` | Which eBay site to search |
 | `IG_USER_ID` | *(unset)* | Your Instagram business account ID, for the venue feed |
 | `IG_ACCESS_TOKEN` | *(unset)* | A Meta Graph API token with `instagram_basic` |
 | `VENUE_ACCOUNTS` | *(unset)* | Venues to follow, e.g. `Dublin:workmansclub,Bangkok:studiolam` |
@@ -91,10 +93,17 @@ the real thing for whichever city someone looks at, their home city included
   Photos come through Tastemate, so the key stays on the server, and each
   card credits its rating and photographer as Google asks.
 
-Once a city has live events or places, its sample ones step aside (per kind:
-live events with no live places still shows sample places). A feed that fails
-is retried after half an hour and never breaks the page. Things to buy are
-still samples; there's no open feed for those yet.
+- **Things to buy** from eBay: sixteen searches that follow tastes (jazz,
+  soul and folk on vinyl, a tweed blazer, a linen shirt, beeswax candles, a
+  stoneware pour-over, a film camera, art prints...), new and secondhand,
+  five of each, with price, photo and link. They ship, so they're fetched
+  once for everyone, daily. eBay may ask you to apply for Buy API access
+  before production use.
+
+Once a city has live events or places (or there are live things to buy),
+the sample ones step aside, per kind: live events with no live places still
+shows sample places. A feed that fails is retried after half an hour and
+never breaks the page.
 
 ### Connecting Spotify and Instagram
 
@@ -160,7 +169,8 @@ the browser. Disconnecting deletes them; the saves already brought in stay.
   - **Everything is connected:** you (character and photo) in the middle
     of a crossword of your tastes, tied together with red string;
   - **Your world, in one picture:** what's in your bag and what your room
-    looks like, drawn from your saves and labelled with them;
+    looks like, drawn from your saves and labelled with them, and saved as
+    an image to share;
   - **Feed your Tastemate:** **connect Spotify** (liked songs and saved
     albums, kept up to date) and **Instagram** (your own posts, for
     professional accounts), upload the download each app sends you (the

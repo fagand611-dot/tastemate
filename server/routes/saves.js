@@ -35,7 +35,7 @@ export default function savesRoutes(r, { db, venueFeed, enricher, feeds }) {
     };
     return db.prepare(`SELECT * FROM spots WHERE added_by IS NULL OR added_by IN (${ids.map(() => '?').join(',')})`).all(...ids)
       .map(hydrateSpot)
-      .filter((s) => !(s.is_demo && s.city && isLive(s)));
+      .filter((s) => !(s.is_demo && isLive(s)));
   };
   // Cities Next can show: wherever there are spots, and, with live feeds on, your home city too.
   const nextCities = (userId) => {

@@ -156,7 +156,9 @@ character (`tasteCharacter`), never as a chart:
   the middle; frames, lamps and plants in mirrored pairs, so a single lamp
   stands on both sides) with numbered things and a key. A line reflects it
   back: *Never leaves the house without a book, a coffee and something from
-  a bakery.*
+  a bakery.* **Save as image** draws the picture onto a 1080×1350 card
+  (captions, reflection, your title) and opens the share sheet, or
+  downloads a PNG.
 - **Friends' titles:** friends, your taste twin and Host guests all show
   their own Tastemate title and character ("Maya · The Natural-Wine
   Wanderer").
@@ -282,8 +284,10 @@ wear. The rest of the evening is built from the same picks:
 
 ### Live feeds (`server/feeds.js`)
 
-Next needs to know what's actually on and where. Two feeds fill the spots
-table per city, when someone looks: **Ticketmaster** (events; genres become
+Next needs to know what's actually on, where to go and what to buy. Three
+feeds fill the spots table: **eBay** (things to buy, from searches that follow
+tastes; they ship, so fetched once for everyone, daily), and per city, when
+someone looks, **Ticketmaster** (events; genres become
 tastes: Jazz → jazz, Comedy → comedy, Music → live music) and **Google
 Places** (places; each search carries its tastes, "natural wine bar" →
 wine bar, intimate, and the place's own summary is read too; popularity is
