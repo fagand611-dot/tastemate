@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { qs } from '../api.js';
-import Icon, { SAVE_ICON, SPOT_ICON } from '../components/Icon.jsx';
+import Icon, { SPOT_ICON } from '../components/Icon.jsx';
 import { useActions } from '../components/actions.jsx';
 import Mascot from '../components/Mascot.jsx';
-import { hasArt } from '../components/TasteArt.jsx';
+import TasteArt, { hasArt } from '../components/TasteArt.jsx';
+import { PinBoard, Vinyl, wesFor } from '../components/Retro.jsx';
 import { Empty, Loading, PageHead, useApi } from '../components/ui.jsx';
 
 // Host: "I'm having people over" → one theme from your taste clusters, and
@@ -12,7 +13,8 @@ import { Empty, Loading, PageHead, useApi } from '../components/ui.jsx';
 export default function Host() {
   const [type, setType] = useState('dinner');
   const [theme, setTheme] = useState(null);
-  const state = useApi(`/occasion${qs({ type, theme })}`);
+  const [city, setCity] = useState(null);
+  const state = useApi(`/occasion${qs({ type, theme, city })}`);
 
   return (
     <>
@@ -20,10 +22,18 @@ export default function Host() {
       <Loading state={state}>
         {(d) => (
           <>
-            <div className="seg" role="radiogroup" aria-label="Occasion">
-              {d.occasions.map((o) => (
-                <button key={o.type} role="radio" aria-checked={type === o.type} className={type === o.type ? 'on' : ''} onClick={() => (setType(o.type), setTheme(null))}>{o.label}</button>
-              ))}
+            <div className="host-controls">
+              <div className="seg" role="radiogroup" aria-label="Occasion">
+                {d.occasions.map((o) => (
+                  <button key={o.type} role="radio" aria-checked={type === o.type} className={type === o.type ? 'on' : ''} onClick={() => (setType(o.type), setTheme(null))}>{o.label}</button>
+                ))}
+              </div>
+              <label className="field-inline">
+                <span className="label">In</span>
+                <select value={d.city || ''} onChange={(e) => setCity(e.target.value)} aria-label="City">
+                  {d.cities.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </label>
             </div>
 
             {d.themes.length === 0 ? (
@@ -61,6 +71,30 @@ function Plan({ d }) {
         </div>
       </section>
 
+      <div className="venue-row">
+        {d.venue && (
+          <article className="venue-card" style={{ '--tape': wesFor(d.venue.spot.title) }}>
+            <span className="venue-photo" style={{ background: wesFor(d.venue.spot.title) }}>
+              <TasteArt name={d.venue.spot.tags.find(hasArt) || 'wine bar'} size={70} fill="#fff" />
+            </span>
+            <div>
+              <p className="eyebrow">Throw it at</p>
+              <h3>{d.venue.spot.title}</h3>
+              <p className="sub">{[d.venue.spot.venue, d.venue.spot.city].filter(Boolean).join(' · ')}{d.venue.spot.is_demo && <span className="badge demo">demo</span>}</p>
+              {d.venue.because.length > 0 && <p className="because">for your love of {d.venue.because.join(', ')}</p>}
+            </div>
+          </article>
+        )}
+        <article className="style-card">
+          <p className="eyebrow">Your style of the night</p>
+          <h3>{d.invite.dress || 'Come as you are'}</h3>
+          <div className="swatches big" aria-label="Wear these colours">
+            {d.theme.palette.map((c) => <span key={c} style={{ background: c }} title={c} />)}
+          </div>
+          <p className="muted small">Wear these colours, light candles, and put {d.playlist.fromSaves[0]?.title || d.playlist.more[0]?.title || 'a record'} on first.</p>
+        </article>
+      </div>
+
       <div className="host-grid">
         <Invite invite={d.invite} />
         <section className="panel">
@@ -75,26 +109,19 @@ function Plan({ d }) {
           <IdeaList title="Main" items={d.food.main} />
           <IdeaList title="Sweet" items={d.food.sweet} />
         </section>
-        <section className="panel">
+        <section className="panel span-all">
           <h2><Icon name="music" /> Press play</h2>
-          {d.playlist.fromSaves.length > 0 && (
-            <>
-              <span className="label">From your saves</span>
-              <ol className="playlist">
-                {d.playlist.fromSaves.map((s) => (
-                  <li key={s.id}>{s.url ? <a href={s.url} target="_blank" rel="noreferrer">{s.title}</a> : s.title}{s.creator && <span className="muted"> · {s.creator}</span>}</li>
-                ))}
-              </ol>
-            </>
-          )}
-          {d.playlist.more.length > 0 && (
-            <>
-              <span className="label">Records that fit</span>
-              <ul className="playlist">
-                {d.playlist.more.map((s) => <li key={s.title}>{s.title}<span className="muted"> · {s.creator}</span></li>)}
-              </ul>
-            </>
-          )}
+          <ul className="records">
+            {[...d.playlist.fromSaves.map((x) => ({ ...x, mine: true })), ...d.playlist.more].map((x) => (
+              <li key={x.title} className="record">
+                <Vinyl title={x.title} size={48} />
+                <span>
+                  <b>{x.url ? <a href={x.url} target="_blank" rel="noreferrer">{x.title}</a> : x.title}</b>
+                  <small className="muted">{x.creator}{x.mine ? ' · from your saves' : ''}</small>
+                </span>
+              </li>
+            ))}
+          </ul>
         </section>
       </div>
 
@@ -106,21 +133,20 @@ function Plan({ d }) {
               <p className="shelf-sub">Your own saves, from every app, that set this mood.</p>
             </div>
           </div>
-          <div className="moodboard">
-            {d.moodboard.map((m, i) => {
-              const bg = d.theme.palette[i % d.theme.palette.length];
-              const dark = isDark(bg);
-              return (
-              <figure key={m.id} className={`mood-tile t${i % 5} ${dark ? 'dark' : ''}`} style={{ '--bg': bg, '--fg': dark ? '#fff' : '#1a1a1a' }}>
-                <Icon name={SAVE_ICON[m.kind]} size={20} />
+          <PinBoard className="collage">
+            {d.moodboard.map((m, i) => (
+              <figure key={m.id} className="collage-snap" style={{ '--tilt': `${((i * 37) % 9) - 4}deg` }}>
+                <span className="pin" aria-hidden />
+                <span className="collage-photo" style={{ background: d.theme.palette[i % d.theme.palette.length] }}>
+                  {m.kind === 'song' ? <Vinyl title={m.title} size={64} /> : <TasteArt name={m.tags.find(hasArt) || 'explorer'} size={60} fill="#fff" />}
+                </span>
                 <figcaption>
                   <b>{m.url ? <a href={m.url} target="_blank" rel="noreferrer">{m.title}</a> : m.title}</b>
-                  <span>{m.tags.slice(0, 3).join(' · ')}</span>
+                  <span>{m.tags.slice(0, 2).join(' · ')}</span>
                 </figcaption>
               </figure>
-              );
-            })}
-          </div>
+            ))}
+          </PinBoard>
         </section>
       )}
 
@@ -140,12 +166,6 @@ function Plan({ d }) {
       )}
     </>
   );
-}
-
-/** Is this #rrggbb colour dark enough to need light text? */
-function isDark(hex) {
-  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-  return 0.299 * r + 0.587 * g + 0.114 * b < 150;
 }
 
 function IdeaList({ title, items }) {

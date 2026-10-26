@@ -4,6 +4,10 @@ import { api } from '../api.js';
 import Icon, { SAVE_ICON } from '../components/Icon.jsx';
 import TasteArt from '../components/TasteArt.jsx';
 import Mascot from '../components/Mascot.jsx';
+import TasteBoard from '../components/TasteBoard.jsx';
+import { Vinyl } from '../components/Retro.jsx';
+import { uploadPhoto } from '../components/photo.js';
+import { useAuth } from '../App.jsx';
 import { useActions } from '../components/actions.jsx';
 import { clusterVar } from '../components/viz.jsx';
 import { Empty, Loading, useApi } from '../components/ui.jsx';
@@ -47,6 +51,15 @@ export default function You() {
         <div className="you">
           {d.character ? <Character c={d.character} /> : <Welcome />}
           {d.lookingUp > 0 && <p className="notice small">Looking up {d.lookingUp} more artist{d.lookingUp > 1 ? 's' : ''}… your character will sharpen in a moment.</p>}
+          {d.character && d.board?.tastes.length > 0 && (
+            <section className="you-section">
+              <div className="you-head">
+                <h2>Everything is connected</h2>
+                <p>You in the middle, and everything your saves say you love, tied together.</p>
+              </div>
+              <BoardWithUser board={d.board} character={d.character} />
+            </section>
+          )}
           {d.character && (
             <>
               <Dials dials={d.character.dials} />
@@ -77,6 +90,39 @@ export default function You() {
         </div>
       )}
     </Loading>
+  );
+}
+
+function BoardWithUser({ board, character }) {
+  const { user } = useAuth();
+  return <TasteBoard board={board} character={character} avatarUrl={user.avatar_url} name={user.display_name.split(' ')[0]} />;
+}
+
+/** Your photo, pinned next to your character, with a way to add or change it. */
+function Photo() {
+  const { user, refresh } = useAuth();
+  const { toast } = useActions();
+  const [busy, setBusy] = useState(false);
+  const pick = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setBusy(true);
+    try {
+      await uploadPhoto(file);
+      await refresh();
+      toast('Looking good!');
+    } catch (err) {
+      toast(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <label className={`hero-photo ${user.avatar_url ? 'has' : ''}`} title={user.avatar_url ? 'Change your photo' : 'Add your photo'}>
+      {user.avatar_url ? <img src={user.avatar_url} alt="Your photo" /> : <span><Icon name="plus" size={18} /> {busy ? 'Uploading…' : 'Add your photo'}</span>}
+      <input type="file" accept="image/*" onChange={pick} hidden disabled={busy} />
+    </label>
   );
 }
 
@@ -113,7 +159,10 @@ function Character({ c }) {
       <div className="character-blobs" aria-hidden>
         {c.sides.map((sd) => <span key={sd.index} className={`blob b${sd.index}`} style={{ background: clusterVar(sd.index) }} />)}
       </div>
-      <div className="character-art"><Mascot size={190} prop={c.key} color={`color-mix(in srgb, ${clusterVar(0)} 38%, white)`} /></div>
+      <div className="character-art">
+        <Mascot size={190} prop={c.key} color="pink" />
+        <Photo />
+      </div>
       <div className="character-body">
         <p className="eyebrow">Meet your Tastemate</p>
         <h1>{c.name}</h1>
@@ -168,7 +217,7 @@ function Sides({ sides }) {
             <ul className="side-proof">
               {sd.proof.map((p) => (
                 <li key={p.id}>
-                  <span className="proof-title"><Icon name={SAVE_ICON[p.kind]} size={14} /> {p.title}{p.creator && !p.title.includes(p.creator) ? <span className="muted"> · {p.creator}</span> : null}</span>
+                  <span className="proof-title">{p.kind === 'song' ? <Vinyl title={p.title} size={22} /> : <Icon name={SAVE_ICON[p.kind]} size={14} />} {p.title}{p.creator && !p.title.includes(p.creator) ? <span className="muted"> · {p.creator}</span> : null}</span>
                   <span className="proof-chips">{p.chips.map((ch) => <Chip key={ch.tag} {...ch} />)}</span>
                 </li>
               ))}
@@ -404,10 +453,13 @@ function SaveRow({ save, onChange }) {
   };
   return (
     <li className="save-row">
-      <span className="save-icon"><Icon name={SAVE_ICON[save.kind]} size={18} /></span>
+      <span className={`save-icon ${save.kind === 'song' ? 'is-vinyl' : ''}`}>{save.kind === 'song' ? <Vinyl title={save.title} size={38} /> : <Icon name={SAVE_ICON[save.kind]} size={18} />}</span>
       <div className="save-main">
         <b>{save.url ? <a href={save.url} target="_blank" rel="noreferrer">{save.title}</a> : save.title}</b>
         <span className="muted small">{[SOURCE_LABEL[save.source], save.collection].filter(Boolean).join(' · ')}</span>
+        {save.links?.length > 0 && !editing && (
+          <span className="save-links"><Icon name="graph" size={13} /> Tied to {save.links.map((l, i) => <span key={l.id}>{i ? ', ' : ''}<b>{l.title}</b> <span className="muted">({l.because.join(', ')})</span></span>)}</span>
+        )}
         {editing ? (
           <div className="row">
             <input autoFocus value={tags} onChange={(e) => setTags(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && commit()} placeholder="jazz, intimate, moody" aria-label="Tags, comma separated" />

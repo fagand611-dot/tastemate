@@ -6,6 +6,7 @@ import { useActions } from '../components/actions.jsx';
 import { Empty, Loading, PageHead, useApi } from '../components/ui.jsx';
 import { Dialog, WhyFlow } from '../components/viz.jsx';
 import TasteArt, { hasArt } from '../components/TasteArt.jsx';
+import { hash, wesFor } from '../components/Retro.jsx';
 
 const iso = (d) => d.toISOString().slice(0, 10);
 const plus = (n) => iso(new Date(Date.now() + n * 864e5));
@@ -114,6 +115,18 @@ export default function Next() {
               </section>
             )}
 
+            {d.pairs?.length > 0 && (
+              <section className="shelf-section">
+                <div className="shelf-head">
+                  <div>
+                    <h2><Icon name="ticket" /> Make a night of it</h2>
+                    <p className="shelf-sub">A show you’d love, and somewhere just around the corner to go before or after.</p>
+                  </div>
+                </div>
+                <div className="pairs">{d.pairs.map((p) => <PairCard key={p.event.spot.id} pair={p} />)}</div>
+              </section>
+            )}
+
             {['event', 'place', 'product'].map((kind) => {
               const list = d[`${kind}s`];
               return (
@@ -125,7 +138,7 @@ export default function Next() {
                     </div>
                   </div>
                   {list.length ? (
-                    <div className="grid">{list.map((x) => <SpotCard key={x.spot.id} {...x} onAct={act} />)}</div>
+                    <div className={kind === 'event' ? 'tickets' : 'grid snaps'}>{list.map((x) => <SpotCard key={x.spot.id} {...x} onAct={act} />)}</div>
                   ) : (
                     <Empty>{kind === 'event' ? 'No matching events in these dates. Try a wider range.' : 'Nothing matching here yet.'}</Empty>
                   )}
@@ -141,7 +154,7 @@ export default function Next() {
                     <p className="shelf-sub">Your saves keep hinting at these. Worth a go?</p>
                   </div>
                 </div>
-                <div className="grid">{d.stretch.map((x) => <SpotCard key={x.spot.id} {...x} onAct={act} />)}</div>
+                <div className="grid snaps">{d.stretch.map((x) => <SpotCard key={x.spot.id} {...x} onAct={act} />)}</div>
               </section>
             )}
 
@@ -272,7 +285,19 @@ function spotWhen(s) {
   return s.ends_at ? `${f(s.starts_at)} – ${f(s.ends_at)}` : `${f(s.starts_at)}${time}`;
 }
 
-function SpotCard({ spot, match, reasons, onAct }) {
+// What kind of night an event is, for the ticket's kicker.
+function ticketKind(spot) {
+  const t = spot.tags;
+  if (t.includes('film') || t.includes('cinema')) return 'Screening';
+  if (t.includes('comedy')) return 'Comedy';
+  if (t.includes('art') || t.includes('gallery') || t.includes('photography')) return 'Exhibition';
+  if (t.includes('live music') || t.includes('jazz') || t.includes('folk') || t.includes('classical')) return 'Live music';
+  if (t.includes('house') || t.includes('techno')) return 'Dance';
+  if (t.includes('market') || t.includes('food')) return 'Food';
+  return 'Event';
+}
+
+function useSpotActions(spot, onAct) {
   const [busy, setBusy] = useState(false);
   const [why, setWhy] = useState(false);
   const go = async (a) => {
@@ -283,37 +308,109 @@ function SpotCard({ spot, match, reasons, onAct }) {
       setBusy(false);
     }
   };
-  const when = spotWhen(spot);
+  return { busy, why, setWhy, go };
+}
+
+function Actions({ busy, go, setWhy }) {
   return (
-    <article className="card spot-card">
-      <div className={`spot-top g${hueFor(spot.title) % 5}`}>
-        <span className="spot-kind"><Icon name={SPOT_ICON[spot.kind]} size={15} /> {spot.kind}</span>
-        <span className="spot-sticker"><TasteArt name={spot.tags.find(hasArt) || 'explorer'} size={70} fill="#fff" /></span>
-        <span className="match">{match}% match</span>
-      </div>
-      <div className="card-body">
-        <div className="card-meta">
-          {when && <span className="badge status"><Icon name="clock" size={12} /> {when}</span>}
-          {spot.price && <span className="badge">{spot.price}</span>}
-          {spot.is_demo && <span className="badge demo" title="Sample data, not a real listing">demo</span>}
+    <div className="actions">
+      <button disabled={busy} className="btn btn-sm btn-primary" onClick={() => go('save')}><Icon name="plus" size={16} /> Save</button>
+      <button className="btn btn-sm btn-ghost why-btn" onClick={() => setWhy(true)}><Icon name="graph" size={16} /> Why?</button>
+      <button disabled={busy} className="icon-btn" aria-label="Not for me" title="Not for me" onClick={() => go('dismiss')}><Icon name="x" size={18} /></button>
+    </div>
+  );
+}
+
+function WhyDialog({ spot, match, reasons, onClose }) {
+  return (
+    <Dialog title={`Why ${spot.title}?`} onClose={onClose}>
+      <p className="muted small">How your saves led here. The wider the stream, the more of your saves.</p>
+      <WhyFlow spot={spot} match={match} reasons={reasons} />
+      <SpotReasons reasons={reasons} />
+    </Dialog>
+  );
+}
+
+/** One pick: events are movie tickets, places are polaroids, things are price tags. */
+function SpotCard(props) {
+  if (props.spot.kind === 'event') return <TicketCard {...props} />;
+  return <SnapCard {...props} />;
+}
+
+/** An event as an old cinema ticket: ADMIT ONE, a stub with the date, a perforated edge. */
+function TicketCard({ spot, match, reasons, onAct }) {
+  const a = useSpotActions(spot, onAct);
+  const day = spot.starts_at ? new Date(`${spot.starts_at.slice(0, 10)}T12:00:00`) : null;
+  const time = spot.starts_at?.length > 10 ? spot.starts_at.slice(11, 16) : null;
+  const running = spot.ends_at && spot.starts_at?.slice(0, 10) <= new Date().toISOString().slice(0, 10);
+  return (
+    <article className="ticket" style={{ '--tk': wesFor(spot.title) }}>
+      <div className="ticket-main">
+        <div className="ticket-top">
+          <span className="ticket-kicker">Admit one · {ticketKind(spot)}</span>
+          <span className="match">{match}%</span>
         </div>
         <h3>{spot.url ? <a href={spot.url} target="_blank" rel="noreferrer">{spot.title}</a> : spot.title}</h3>
-        <p className="sub">{[spot.venue, spot.city || 'Online'].filter(Boolean).join(' · ')}</p>
-        {spot.description && <p className="desc">{spot.description}</p>}
+        <p className="sub">{[spot.venue, spot.city].filter(Boolean).join(' · ')}{spot.is_demo && <span className="badge demo">demo</span>}</p>
         <SpotReasons reasons={reasons} compact />
-        <div className="actions">
-          <button disabled={busy} className="btn btn-sm btn-outline" onClick={() => go('save')}><Icon name="plus" size={16} /> Save</button>
-          <button className="btn btn-sm btn-ghost why-btn" onClick={() => setWhy(true)}><Icon name="graph" size={16} /> Why?</button>
-          <button disabled={busy} className="icon-btn" aria-label="Not for me" title="Not for me" onClick={() => go('dismiss')}><Icon name="x" size={18} /></button>
-        </div>
+        <Actions {...a} />
       </div>
-      {why && (
-        <Dialog title={`Why ${spot.title}?`} onClose={() => setWhy(false)}>
-          <p className="muted small">How your saves led here. The wider the stream, the more of your saves.</p>
-          <WhyFlow spot={spot} match={match} reasons={reasons} />
-          <SpotReasons reasons={reasons} />
-        </Dialog>
-      )}
+      <div className="ticket-stub" aria-label={spotWhen(spot) || undefined}>
+        <span className="stub-sticker"><TasteArt name={spot.tags.find(hasArt) || 'explorer'} size={46} fill="#fff" /></span>
+        {day && (running
+          ? <span className="stub-date"><small>until</small><b>{new Date(`${spot.ends_at}T12:00:00`).getDate()}</b>{new Date(`${spot.ends_at}T12:00:00`).toLocaleDateString(undefined, { month: 'short' })}</span>
+          : <span className="stub-date"><small>{day.toLocaleDateString(undefined, { weekday: 'short' })}</small><b>{day.getDate()}</b>{day.toLocaleDateString(undefined, { month: 'short' })}</span>)}
+        {time && <span className="stub-time">{time}</span>}
+        {spot.price && <span className="stub-price">{spot.price}</span>}
+        <span className="barcode" aria-hidden />
+        <span className="serial">No. {String(spot.id * 7919 % 1000000).padStart(6, '0')}</span>
+      </div>
+      {a.why && <WhyDialog spot={spot} match={match} reasons={reasons} onClose={() => a.setWhy(false)} />}
+    </article>
+  );
+}
+
+/** A place as a polaroid; a thing to buy as a polaroid with a price tag. */
+function SnapCard({ spot, match, reasons, onAct, tilt }) {
+  const a = useSpotActions(spot, onAct);
+  const t = tilt ?? ((hash(spot.title) % 5) - 2) * 0.8;
+  return (
+    <article className={`snap ${spot.kind}`} style={{ '--tilt': `${t}deg`, '--tape': wesFor(spot.venue || spot.title) }}>
+      <div className="snap-photo" style={{ background: wesFor(spot.title) }}>
+        <TasteArt name={spot.tags.find(hasArt) || 'explorer'} size={86} fill="#fff" />
+        <span className="match">{match}%</span>
+        {spot.kind === 'product' && spot.price && <span className="price-tag">{spot.price}</span>}
+      </div>
+      <div className="snap-body">
+        <h3>{spot.url ? <a href={spot.url} target="_blank" rel="noreferrer">{spot.title}</a> : spot.title}</h3>
+        <p className="sub">{[spot.venue, spot.city || 'Ships to you'].filter(Boolean).join(' · ')}{spot.is_demo && <span className="badge demo">demo</span>}</p>
+        <SpotReasons reasons={reasons} compact />
+        <Actions {...a} />
+      </div>
+      {a.why && <WhyDialog spot={spot} match={match} reasons={reasons} onClose={() => a.setWhy(false)} />}
+    </article>
+  );
+}
+
+/** "Make a night of it": a show, and somewhere you'd love a short walk away, tied with string. */
+function PairCard({ pair }) {
+  const { event, place, walk, because } = pair;
+  return (
+    <article className="pair">
+      <div className="pair-ticket" style={{ '--tk': wesFor(event.spot.title) }}>
+        <span className="ticket-kicker">Admit one · {ticketKind(event.spot)}</span>
+        <b>{event.spot.title}</b>
+        <span className="sub">{event.spot.venue}{spotWhen(event.spot) ? ` · ${spotWhen(event.spot)}` : ''}</span>
+      </div>
+      <div className="pair-string" aria-hidden>
+        <svg viewBox="0 0 100 40" preserveAspectRatio="none"><path d="M0 20 Q 25 38 50 20 T 100 20" /></svg>
+        <span className="walk">{walk} min walk</span>
+      </div>
+      <div className="pair-snap" style={{ '--tape': wesFor(place.spot.title) }}>
+        <span className="pair-photo" style={{ background: wesFor(place.spot.title) }}><TasteArt name={place.spot.tags.find(hasArt) || 'explorer'} size={44} fill="#fff" /></span>
+        <b>{place.spot.title}</b>
+        <span className="sub">{because.length ? `for your love of ${because.join(' & ')}` : place.spot.venue}</span>
+      </div>
     </article>
   );
 }
@@ -369,8 +466,3 @@ function SpotReasons({ reasons, compact }) {
   );
 }
 
-function hueFor(s) {
-  let h = 0;
-  for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return h % 360;
-}

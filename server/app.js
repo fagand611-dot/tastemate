@@ -10,12 +10,14 @@ import { createEnricher } from './enrich.js';
 import authRoutes from './routes/auth.js';
 import savesRoutes from './routes/saves.js';
 import friendRoutes from './routes/friends.js';
+import profileRoutes from './routes/profile.js';
 
 export function createApp({ db, venueFeed = createVenuePosts(), artistLookup = createArtistLookup() }) {
   const app = express();
   app.disable('x-powered-by');
   // Export files from other apps can be large; everything else stays small.
   app.use('/api/saves/import', express.json({ limit: '8mb' }));
+  app.use('/api/me/avatar', express.json({ limit: '512kb' }));
   app.use(express.json({ limit: '100kb' }));
   app.use(cookieParser());
   app.use(loadUser(db));
@@ -26,6 +28,7 @@ export function createApp({ db, venueFeed = createVenuePosts(), artistLookup = c
   const api = express.Router();
   authRoutes(api, ctx);
   friendRoutes(api, ctx);
+  profileRoutes(api, ctx);
   savesRoutes(api, ctx);
   api.use((_req, res) => res.status(404).json({ error: 'Not found' }));
   app.use('/api', api);

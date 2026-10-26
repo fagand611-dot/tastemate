@@ -37,7 +37,7 @@ export function cookieOptions(expires) {
 /** Express middleware: sets req.user when the request has a valid session. */
 export function loadUser(db) {
   const stmt = db.prepare(
-    `SELECT u.id, u.username, u.display_name, u.home_city
+    `SELECT u.id, u.username, u.display_name, u.home_city, u.avatar_at, u.avatar IS NOT NULL AS has_avatar
        FROM sessions s JOIN users u ON u.id = s.user_id
       WHERE s.token = ? AND s.expires_at > ?`
   );
@@ -45,7 +45,10 @@ export function loadUser(db) {
     const token = req.cookies?.[COOKIE];
     if (token) {
       const u = stmt.get(token, new Date().toISOString());
-      if (u) req.user = u;
+      if (u) {
+        const { avatar_at, has_avatar, ...rest } = u;
+        req.user = { ...rest, avatar_url: has_avatar ? `/api/users/${u.id}/avatar?v=${encodeURIComponent(avatar_at)}` : null };
+      }
     }
     next();
   };

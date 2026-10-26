@@ -37,7 +37,7 @@ export function interpret(saves, { cache = null } = {}) {
       const r = read.get(tag);
       // Tags the text doesn't explain came from you or a curated spot: take them at face value.
       const tier = r?.tier === 'translated' && s.source !== 'tastemate' ? 'translated' : 'obvious';
-      return { tag, tier, conf: TIER_CONF[tier], via: r && r.via !== tag ? r.via : null, facet: r?.facet || facetOf(tag) };
+      return { tag, tier, conf: +(TIER_CONF[tier] * (r?.w ?? 1)).toFixed(3), via: r && r.via !== tag ? r.via : null, facet: r?.facet || facetOf(tag) };
     });
     // Where it was saved is part of the taste too ("London", "Bangkok").
     const city = s.city?.trim().toLowerCase();
@@ -339,7 +339,7 @@ export function tasteCharacter(saves, clusters, profile) {
   });
   const apps = countBy(all.filter((s) => s.source !== 'tastemate'), (s) => s.source);
   // Stretch: strongest could-be tastes you rarely say outright. Only things
-  // you can go and try: sounds and things, not moods, places or eras.
+  // you can go and try: sounds, food and things, not moods, places or eras.
   const firm = new Map();
   const maybe = new Map();
   const why = {};
@@ -349,7 +349,7 @@ export function tasteCharacter(saves, clusters, profile) {
     if (x.tier === 'possible' && !why[x.tag]) why[x.tag] = x.via;
   }
   const stretch = [...maybe.entries()]
-    .filter(([t]) => (firm.get(t) || 0) < 1.5 && ['sound', 'thing'].includes(facetOf(t)) && t !== 'food')
+    .filter(([t]) => (firm.get(t) || 0) < 1.5 && ['sound', 'food', 'thing'].includes(facetOf(t)) && t !== 'food')
     .sort((a, b) => b[1] - a[1])
     .slice(0, 4)
     .map(([t]) => t);
@@ -368,6 +368,147 @@ export function tasteCharacter(saves, clusters, profile) {
     stretch,
     stretchWhy: Object.fromEntries(stretch.map((t) => [t, why[t]])),
   };
+}
+
+// How much a shared attribute ties two saves together, by dimension:
+// the same artist ties them most, the same price band least.
+export const DIM_WEIGHT = { artist: 1.4, sound: 1, food: 1, thing: 0.9, vibe: 0.8, place: 0.7, era: 0.5, time: 0.4, price: 0.3 };
+
+// Tags so broad that sharing them says little ("both food").
+const BROAD = new Set(['food', 'art', 'design']);
+
+/** A save's firm attributes as Map<tag, { conf, facet }>, its artist included. */
+function attributes(s) {
+  const m = new Map();
+  for (const x of s.signals) if (x.tier !== 'possible') m.set(x.tag, { conf: x.conf, facet: x.facet });
+  if (s.creator) m.set(`creator:${s.creator.toLowerCase()}`, { conf: 1, facet: 'artist' });
+  return m;
+}
+
+/**
+ * Links between saves: each save to the few others it shares the most with.
+ * Strength = Σ over shared attributes of min(confidence) × dimension weight.
+ * Only saves sharing at least one attribute are compared (an index by tag).
+ * Returns [{ a, b, strength, because: [tags] }].
+ */
+export function connectSaves(saves, { perSave = 3, min = 0.6 } = {}) {
+  const all = ensure(saves);
+  const attrs = all.map(attributes);
+  const byTag = new Map();
+  attrs.forEach((m, i) => { for (const t of m.keys()) byTag.set(t, [...(byTag.get(t) || []), i]); });
+  const best = all.map(() => []);
+  const seen = new Set();
+  for (let i = 0; i < all.length; i++) {
+    const candidates = new Set([...attrs[i].keys()].flatMap((t) => byTag.get(t)));
+    for (const j of candidates) {
+      if (j <= i || seen.has(`${i}|${j}`)) continue;
+      seen.add(`${i}|${j}`);
+      const shared = [];
+      let strength = 0;
+      for (const [t, x] of attrs[i]) {
+        const y = attrs[j].get(t);
+        if (!y) continue;
+        const c = Math.min(x.conf, y.conf) * (DIM_WEIGHT[x.facet] ?? 0.8) * (BROAD.has(t) ? 0.3 : 1);
+        strength += c;
+        shared.push([t, c]);
+      }
+      if (strength < min) continue;
+      const edge = {
+        a: all[i].id,
+        b: all[j].id,
+        strength: +strength.toFixed(2),
+        because: shared.sort((p, q) => q[1] - p[1]).slice(0, 3).map(([t]) => (t.startsWith('creator:') ? all[i].creator : t)),
+      };
+      best[i].push(edge);
+      best[j].push(edge);
+    }
+  }
+  const keep = new Set(best.flatMap((list) => list.sort((p, q) => q.strength - p.strength).slice(0, perSave)));
+  return [...keep].sort((p, q) => q.strength - p.strength);
+}
+
+/**
+ * The taste board: you in the middle, your strongest tastes around you
+ * (weight 0–1, its dimension, which side it belongs to, a couple of saves
+ * behind it), and threads between tastes that turn up in the same saves.
+ */
+export function tasteBoard(saves, clusters, profile, { size = 14, threads = 16 } = {}) {
+  const all = ensure(saves);
+  const ranked = [...profile.entries()].filter(([k, v]) => v > 0 && !k.startsWith('creator:')).sort((a, b) => b[1] - a[1]);
+  // A mix of dimensions, so the board isn't fourteen moods.
+  const perFacet = {};
+  const picked = [];
+  for (const [tag, w] of ranked) {
+    const facet = facetOf(tag);
+    if ((perFacet[facet] || 0) >= (facet === 'vibe' ? 4 : 3)) continue;
+    perFacet[facet] = (perFacet[facet] || 0) + 1;
+    picked.push([tag, w, facet]);
+    if (picked.length === size) break;
+  }
+  const max = picked[0]?.[1] || 1;
+  const keep = new Set(picked.map(([t]) => t));
+  const pair = new Map();
+  const behind = new Map();
+  for (const s of all) {
+    const tags = s.signals.filter((x) => x.tier !== 'possible' && keep.has(x.tag)).map((x) => x.tag);
+    for (const t of tags) behind.set(t, [...(behind.get(t) || []), s.title]);
+    for (let i = 0; i < tags.length; i++) for (let j = i + 1; j < tags.length; j++) {
+      const key = [tags[i], tags[j]].sort().join('|');
+      pair.set(key, (pair.get(key) || 0) + 1);
+    }
+  }
+  return {
+    tastes: picked.map(([tag, w, facet]) => ({
+      tag,
+      facet,
+      weight: +(w / max).toFixed(2),
+      side: clusters.slice(0, 3).findIndex((c) => c.tags.includes(tag)),
+      saves: (behind.get(tag) || []).length,
+      examples: (behind.get(tag) || []).slice(0, 2),
+    })),
+    threads: [...pair.entries()].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).slice(0, threads).map(([k, n]) => {
+      const [a, b] = k.split('|');
+      return { a, b, n };
+    }),
+  };
+}
+
+/** Metres between two points on Earth. */
+export function distanceM(a, b) {
+  const R = 6371000;
+  const rad = (d) => (d * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLng = rad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return Math.round(2 * R * Math.asin(Math.sqrt(h)));
+}
+
+/**
+ * Make a day (or night) of it: for each event, the best-matching place within
+ * walking distance, so "see this show" comes with "and eat here, it's four
+ * minutes away and you love coffee and art". Needs coordinates on both.
+ */
+export function pairSpots({ events, places, profile, maxM = 1500, limit = 3 }) {
+  const out = [];
+  const used = new Set();
+  for (const ev of events) {
+    if (ev.spot.lat == null) continue;
+    let best = null;
+    for (const pl of places) {
+      if (used.has(pl.spot.id) || pl.spot.lat == null || pl.spot.city !== ev.spot.city) continue;
+      const d = distanceM(ev.spot, pl.spot);
+      if (d > maxM) continue;
+      // Closer is better, but taste matters more.
+      const score = pl.score + 0.15 * (1 - d / maxM);
+      if (!best || score > best.score) best = { place: pl, d, score };
+    }
+    if (!best) continue;
+    used.add(best.place.spot.id);
+    const because = best.place.spot.tags.filter((t) => (profile.get(t) || 0) > 0).sort((a, b) => profile.get(b) - profile.get(a)).slice(0, 2);
+    out.push({ event: ev, place: best.place, distance: best.d, walk: Math.max(1, Math.round(best.d / 80)), because });
+    if (out.length === limit) break;
+  }
+  return out;
 }
 
 function countBy(list, key) {

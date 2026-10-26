@@ -247,3 +247,48 @@ test('occasion: a plan from your clusters, with a theme you can switch', async (
   }
   assert.equal((await me.get('/occasion?type=nonsense')).body.occasion.type, 'dinner');
 });
+
+test('connections: saves link to each other, You has a taste board, Next pairs a show with a place nearby', async () => {
+  const me = await signup('connector');
+  await me.post('/saves/import', { source: 'spotify', text: 'Miles Davis - So What\nMiles Davis - Blue in Green\nBill Evans - Peace Piece' });
+  await me.post('/saves', { title: 'Specialty coffee and vinyl', city: 'Dublin' });
+  await me.post('/saves', { title: 'Late night jazz bar', city: 'Dublin' });
+  await me.put('/settings', { home_city: 'Dublin' });
+
+  const { saves } = (await me.get('/saves')).body;
+  const sowhat = saves.find((s) => s.title === 'So What');
+  assert.ok(sowhat.links.some((l) => l.title === 'Blue in Green' && l.because.includes('Miles Davis')));
+
+  const you = (await me.get('/you')).body;
+  assert.ok(you.board.tastes.some((t) => t.tag === 'jazz'));
+  assert.ok(Array.isArray(you.board.threads));
+
+  const next = (await me.get('/next?city=Dublin&window=2weeks')).body;
+  assert.ok(Array.isArray(next.pairs));
+  for (const p of next.pairs) {
+    assert.equal(p.event.spot.kind, 'event');
+    assert.equal(p.place.spot.city, p.event.spot.city);
+    assert.ok(p.distance <= 1500);
+  }
+
+  const plan = (await me.get('/occasion?type=dinner&city=Dublin')).body;
+  assert.ok(plan.cities.includes('Dublin'));
+  assert.equal(plan.city, 'Dublin');
+  if (plan.venue) assert.equal(plan.venue.spot.city, 'Dublin');
+});
+
+test('profile photo: upload, serve, replace and remove; only small images', async () => {
+  const me = await signup('selfie');
+  const png = 'data:image/png;base64,' + Buffer.from('\x89PNG fake image bytes').toString('base64');
+  assert.equal((await me.put('/me/avatar', { image: 'data:text/html;base64,PGgxPg==' })).status, 400);
+  assert.equal((await me.put('/me/avatar', { image: 'data:image/png;base64,' + Buffer.alloc(310 * 1024).toString('base64') })).status, 413);
+  const up = await me.put('/me/avatar', { image: png });
+  assert.equal(up.status, 200);
+  assert.match(up.body.avatar_url, new RegExp(`^/api/users/${me.id}/avatar\\?v=`));
+  assert.equal((await me.get('/me')).body.user.avatar_url, up.body.avatar_url);
+  const img = await fetch(base.replace(/\/api$/, '') + up.body.avatar_url);
+  assert.equal(img.headers.get('content-type'), 'image/png');
+  assert.equal(Buffer.from(await img.arrayBuffer()).toString(), '\x89PNG fake image bytes');
+  assert.equal((await me.del('/me/avatar')).body.avatar_url, null);
+  assert.equal((await fetch(`${base}/users/${me.id}/avatar`)).status, 404);
+});

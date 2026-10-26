@@ -6,6 +6,7 @@ import Icon from '../components/Icon.jsx';
 import { useActions } from '../components/actions.jsx';
 import { useApi } from '../components/ui.jsx';
 import { useTheme } from '../theme.js';
+import { uploadPhoto } from '../components/photo.js';
 
 const LINKS = [
   ['/you', 'You', 'sparkle', 'Your Tastemate character, and your saves'],
@@ -33,7 +34,22 @@ export default function Me() {
   return (
     <div className="me-page">
       <div className="me-head">
-        <div className="avatar-lg">{user.display_name[0].toUpperCase()}</div>
+        <label className="avatar-lg avatar-pick" title="Change your photo">
+          {user.avatar_url ? <img src={user.avatar_url} alt="" /> : user.display_name[0].toUpperCase()}
+          <span className="avatar-edit"><Icon name="plus" size={14} /></span>
+          <input type="file" accept="image/*" hidden onChange={async (e) => {
+            const f = e.target.files?.[0];
+            e.target.value = '';
+            if (!f) return;
+            try {
+              await uploadPhoto(f);
+              await refresh();
+              toast('New photo, who dis?');
+            } catch (err) {
+              toast(err.message);
+            }
+          }} />
+        </label>
         <div>
           <h1>{user.display_name}</h1>
           <span className="muted">@{user.username}</span>

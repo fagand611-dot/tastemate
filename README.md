@@ -81,11 +81,14 @@ posts still works.
   - **Stretch your taste:** what your saves keep hinting at that you
     haven't explored;
   - **Your taste twin** among your friends;
+  - **Everything is connected:** you (character and photo) in the middle
+    of a crossword of your tastes, tied together with red string;
   - **Feed your Tastemate:** import the data export from each app (Spotify
     `YourLibrary.json`, Instagram `saved_collections.json`, Google Takeout
     `Saved Places.json` or list CSVs, pasted Pinterest pins) or add a save
     by hand. Everything you've saved stays in a drawer, each save shown as
-    its parts (artist, sound, vibe, place, era), and retaggable.
+    its parts (artist, sound, food, vibe, place, time, price, era), what
+    it's tied to, and retaggable.
 - **Breaking saves down:** each save is read for facets, in three tiers:
   **obvious** (says it), **translated** (means it: "Vinyl listening bar"
   → jazz, Olivia Dean → London neo-soul) and **could be** (goes with it, or
@@ -99,6 +102,8 @@ posts still works.
   you saved these*). Loving London artists counts towards London spots, and
   **under-the-radar** places get a boost. **Why?** on any pick draws the
   streams from your apps, through the tastes they share, into its match ring.
+  **Make a night of it** pairs a show with a place a short walk away.
+  Events look like old movie tickets, places like polaroids.
 - **Events from posts:** paste a venue's Instagram or Facebook post and
   Tastemate reads the date, time, venue, city and price into an event
   for you to check. Friends see it too. Optionally follow venue accounts
@@ -106,8 +111,11 @@ posts still works.
 - **Host:** pick an occasion (dinner party, house party, date night,
   birthday, brunch) and get one theme from your clusters, with wine,
   cocktails, a zero-proof drink, food, a playlist from your own saves, an
-  invitation styled in the theme, a moodboard of your saves, and where to
-  pick things up in your city.
+  invitation styled in the theme, a pinned collage of your saves, a venue
+  to throw it at, your style of the night, and where to pick things up in
+  your city.
+- **Profile photo** next to your character, set from Account or the
+  character card.
 - **Friends:** mutual friendships with a taste-match %. When a friend saves
   a spot, it shows up in your Next with their name on it.
 
@@ -118,13 +126,13 @@ server/
   app.js            Express app (createApp is used by the tests too)
   db.js             schema + helpers (node:sqlite)
   taxonomy.js       shared tag vocabulary, keyword rules, readSignals()
-  taste-graph.js    interpret saves, profile, clusters, character, perfect day, rank spots (pure)
+  taste-graph.js    interpret saves, profile, clusters, character, connections, board, pairs, rank spots (pure)
   creators.js       built-in artist facts (sound, vibe, from, era)
   enrich.js         background artist lookups, cache, re-tagging
   importers.js      parse each app's data export into saves
   posts.js          read a venue post into an event draft
   occasions.js      plan an occasion from a cluster (pure)
-  routes/           auth, friends, saves (saves, graph, next, spots, occasion)
+  routes/           auth, friends, profile (photo), saves (saves, graph, next, spots, occasion)
   providers/        venue-posts (Instagram Business Discovery), musicbrainz (artist facts)
   seed/             sample spots and demo users
 web/src/            React SPA (pages/, components/, styles.css)

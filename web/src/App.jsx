@@ -91,7 +91,7 @@ export default function App() {
             ))}
           </nav>
           <div className="top-actions">
-            <NavLink to="/me" className="avatar-btn" aria-label="Your account">{user.display_name[0].toUpperCase()}</NavLink>
+            <NavLink to="/me" className="avatar-btn" aria-label="Your account">{user.avatar_url ? <img src={user.avatar_url} alt="" /> : user.display_name[0].toUpperCase()}</NavLink>
           </div>
         </header>
         <main>

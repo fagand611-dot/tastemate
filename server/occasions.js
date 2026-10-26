@@ -236,8 +236,9 @@ export function moodboard(saves, theme, n = 9) {
  * @param {Map}    ctx.profile   from tasteProfile()
  * @param {Array}  ctx.saves     interpreted saves (with signals)
  * @param {Array}  [ctx.shop]    spots (products/places) near you, already filtered by city
+ * @param {Array}  [ctx.venues]  places in the city, for "throw it here"
  */
-export function planOccasion({ type, clusters, theme, profile, saves, shop = [] }) {
+export function planOccasion({ type, clusters, theme, profile, saves, shop = [], venues = [] }) {
   const occasion = OCCASIONS[type] || OCCASIONS.dinner;
   // Default: the cluster that best fits the occasion's leaning.
   const fit = (c) => c.tags.reduce((s, t) => s + (occasion.bias[t] || 0), 0) + c.count * 0.05;
@@ -270,8 +271,15 @@ export function planOccasion({ type, clusters, theme, profile, saves, shop = [] 
     .slice(0, 4)
     .map(({ spot }) => spot);
 
+  // Where to throw it: the place in town that fits the theme best.
+  const venue = venues
+    .map((spot) => ({ spot, score: cosine(vec, new Map(spot.tags.map((t) => [t, 1]))), because: spot.tags.filter((t) => (vec.get(t) || 0) > 0).sort((a, b) => vec.get(b) - vec.get(a)).slice(0, 3) }))
+    .filter((x) => x.score > 0.05)
+    .sort((a, b) => b.score - a.score)[0] || null;
+
   return {
     occasion: { type: OCCASIONS[type] ? type : 'dinner', label: occasion.label },
+    venue: venue && { spot: venue.spot, because: venue.because },
     occasions: Object.entries(OCCASIONS).map(([k, o]) => ({ type: k, label: o.label })),
     themes: order.map((i) => ({ index: i, name: themeName(clusters[i].tags, occasion), tags: clusters[i].tags })),
     theme: { index: idx, name, tags: themeTags, palette: palette(cluster ? cluster.tags : themeTags), from: cluster ? cluster.count + cluster.maybe : 0 },

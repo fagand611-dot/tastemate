@@ -3,8 +3,9 @@ import { createApp } from './app.js';
 import { seedSpots } from './seed/seed.js';
 
 const db = openDb();
-// The first run on an empty database loads the sample spots, so Next is usable straight away.
-if (!db.prepare('SELECT 1 FROM spots LIMIT 1').get()) console.log(`Seeded ${seedSpots(db)} sample spots`);
+// Sample spots, so Next is usable straight away; new ones are added as they ship.
+const added = seedSpots(db);
+if (added) console.log(`Added ${added} sample spots`);
 
 const port = Number(process.env.PORT) || 3001;
 createApp({ db })

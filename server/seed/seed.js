@@ -10,8 +10,18 @@ import { DEMO_SAVES, FRIEND_SAVES, FRIEND_SPOT_SAVES, demoSpots } from './spots.
 /** Sample events, places and products for Next. */
 export function seedSpots(db) {
   const rows = demoSpots();
-  tx(db, () => rows.forEach((s) => upsertSpot(db, s)));
-  return rows.length;
+  let added = 0;
+  tx(db, () => {
+    const has = db.prepare('SELECT id, lat FROM spots WHERE source = ? AND external_id = ?');
+    const place = db.prepare('UPDATE spots SET lat = ?, lng = ? WHERE id = ?');
+    for (const s of rows) {
+      const existing = has.get(s.source, s.external_id);
+      if (!existing) (upsertSpot(db, s), added++);
+      // Older databases: fill in coordinates added since.
+      else if (existing.lat == null && s.lat != null) place.run(s.lat, s.lng, existing.id);
+    }
+  });
+  return added;
 }
 
 const PERSONAS = [

@@ -23,6 +23,9 @@ export const EVENTS = [
   ['Dark academia book club: The Secret History', 'London', 'Daunt Books Marylebone', ['books', 'dark academia', 'cerebral', 'cozy', 'moody'], 8, 1, 0.15, 'Discussion, tea and a reading from a new campus novel.'],
   ['Techno all-nighter', 'London', 'Fabric', ['techno', 'high-energy', 'dark', 'lively'], 6, 1, 0.75, 'Three rooms, eight hours.'],
   ['Kissa jazz evening', 'Tokyo', 'JBS Shibuya', ['jazz', 'vinyl', 'intimate', 'chill'], 2, 1, 0.3, 'A wall of records and an owner who takes requests.'],
+  ['Outdoor screening: In the Mood for Love', 'Bangkok', 'Lumpini Park lawn', ['film', 'cinema', 'romantic', 'atmospheric', 'night out'], 3, 1, 0.35, 'Wong Kar-wai under the trees. Bring a blanket.', ['Wong Kar-wai']],
+  ['Film club: Paris, Texas on 35mm', 'Dublin', 'Irish Film Institute', ['film', 'cinema', 'cerebral', 'atmospheric'], 4, 1, 0.3, 'A print screening with a short talk before.', ['Wim Wenders']],
+  ['Late screening: Jazz on a Summer’s Day', 'London', 'Prince Charles Cinema', ['film', 'cinema', 'jazz', 'vintage', 'night out'], 5, 1, 0.25, 'The 1958 festival film, restored, at 11pm.'],
 ];
 
 export const PLACES = [
@@ -36,6 +39,9 @@ export const PLACES = [
   ['Members-free jazz basement', 'London', 'Soho', ['jazz', 'live music', 'intimate', 'moody'], null, 0.55, 'Walk-ins after 10pm.'],
   ['Specialty coffee and records', 'Dublin', 'Stoneybatter', ['coffee', 'vinyl', 'cozy'], 30, 0.2, 'Second-hand jazz and soul by the till.'],
   ['Pastry and natural wine bistro', 'Dublin', 'Portobello', ['pastry', 'wine bar', 'food', 'intimate'], null, 0.3, 'Bakery in the morning, wine bar at night.'],
+  ['Art-house café next to the gallery', 'Bangkok', 'Pathum Wan', ['coffee', 'art', 'design', 'cozy'], 40, 0.2, 'Rotating shows on the walls, very good flat whites.'],
+  ['Tiny café on Meeting House Square', 'Dublin', 'Temple Bar', ['coffee', 'pastry', 'art'], null, 0.25, 'Window seats looking straight at the gallery.'],
+  ['Noodle shop with a queue at midnight', 'Bangkok', 'Chinatown', ['food', 'noodles', 'street food', 'night out', 'budget', 'thai'], null, 0.45, 'Boat noodles until 2am. Cash only.'],
 ];
 
 export const PRODUCTS = [
@@ -52,6 +58,40 @@ export const PRODUCTS = [
   ['Beeswax dinner candles, set of 6', null, 'Ships worldwide', ['moody', 'intimate', 'cozy', 'romantic'], '$24', 0.3, 'Slow-burning, smoke-free.'],
 ];
 
+// Where things are, so Next can pair a show with somewhere to eat nearby.
+const COORDS = {
+  'Late-night jazz at a listening bar': [13.7313, 100.5847],
+  'Contemporary Thai artists: group show': [13.7466, 100.53],
+  'Night market and street food crawl': [13.757, 100.566],
+  'Ceramics studio open day': [13.7235, 100.515],
+  'Deep house rooftop session': [13.7236, 100.5806],
+  'Outdoor screening: In the Mood for Love': [13.7314, 100.5414],
+  'Kissa-style listening café': [13.7797, 100.5446],
+  'Laminated: a croissant bakery': [13.731, 100.579],
+  'Speakeasy behind a noodle shop': [13.7398, 100.5094],
+  'Riverside contemporary gallery': [13.7225, 100.514],
+  'Brutalist bookshop and café': [13.7262, 100.53],
+  'Art-house café next to the gallery': [13.7469, 100.5306],
+  'Noodle shop with a queue at midnight': [13.7405, 100.5101],
+  'Comedy and jazz night': [53.3452, -6.2672],
+  'Irish folk session, upstairs': [53.3497, -6.278],
+  'Photography after dark: exhibition': [53.3449, -6.2672],
+  'Film club: Paris, Texas on 35mm': [53.3446, -6.265],
+  'Specialty coffee and records': [53.353, -6.284],
+  'Pastry and natural wine bistro': [53.3318, -6.265],
+  'Tiny café on Meeting House Square': [53.3451, -6.2667],
+  'Candlelit string quartet': [51.5089, -0.1265],
+  'Brutalist architecture walking tour': [51.5202, -0.0937],
+  'Natural wine and vinyl evening': [51.529, -0.07],
+  'Dark academia book club: The Secret History': [51.5205, -0.1525],
+  'Techno all-nighter': [51.5197, -0.1026],
+  'Late screening: Jazz on a Summer’s Day': [51.5112, -0.1302],
+  'New pastry counter by a Parisian chef': [51.526, -0.078],
+  'Candlelit wine bar in a railway arch': [51.498, -0.079],
+  'Members-free jazz basement': [51.5135, -0.132],
+  'Kissa jazz evening': [35.6595, 139.7005],
+};
+
 /** Spot rows with dates relative to `now`. */
 export function demoSpots(now = new Date()) {
   const day = (offset) => new Date(now.getTime() + offset * 864e5).toISOString().slice(0, 10);
@@ -65,7 +105,7 @@ export function demoSpots(now = new Date()) {
   for (const [title, city, venue, tags, price, popularity, description] of PRODUCTS) {
     rows.push({ kind: 'product', title, city, venue, tags, price, popularity, description });
   }
-  return rows.map((r) => ({ ...r, source: 'seed', external_id: `${r.kind}:${r.title}`, is_demo: true }));
+  return rows.map((r) => ({ ...r, lat: COORDS[r.title]?.[0], lng: COORDS[r.title]?.[1], source: 'seed', external_id: `${r.kind}:${r.title}`, is_demo: true }));
 }
 
 // Saves for the demo account, across four apps: [source, kind, title, creator, collection, city]
@@ -92,6 +132,8 @@ export const DEMO_SAVES = [
   ['google_maps', 'place', 'Specialty coffee, Ari', null, 'Bangkok trip', 'Bangkok'],
   ['google_maps', 'place', 'Bookshop café', null, 'Loved', 'London'],
   ['pinterest', 'look', 'Minimal wool coat outfit', null, 'Winter'],
+  ['instagram', 'other', '@criterioncollection', 'criterioncollection', 'Films to watch'],
+  ['google_maps', 'place', 'Noodle street shop', null, 'Bangkok trip', 'Bangkok'],
   ['pinterest', 'art', 'Candle-lit reading nook, moody', null, 'Home'],
 ];
 

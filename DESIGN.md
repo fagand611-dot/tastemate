@@ -61,10 +61,15 @@ A keyword match alone isn't taste. Tastemate reads each save as a whole
 | **Could be** | It goes with it, or your habits say so | vinyl *often goes with* jazz; *most of your intimate saves are also jazz* | 0.4 × strength, or 0.35 × P(B given A) |
 
 - **Facets.** Every signal belongs to a facet (`facetOf`): **sound**,
-  **vibe**, **place**, **era** or **thing**, plus the **artist** itself. One
+  **food**, **vibe**, **place**, **time** (day or night), **price**, **era**
+  or **thing**, plus the **artist** itself. One
   save breaks down into several: "Dive — Olivia Dean" → neo-soul, soul, pop
-  · warm, uplifting, romantic · London · 2020s. The city a save was made in
-  counts as a place too.
+  · warm, uplifting, romantic · London · 2020s; "Noodle street shop" in
+  Bangkok → noodles, street food · casual · late night · budget · Bangkok.
+  The city a save was made in, or a city named in it, counts as a place.
+- **Weights.** Keyword rules carry a weight per attribute (`'night out@0.5'`):
+  a wine bar is surely moody and only probably a night out. A signal's
+  confidence is its tier × that weight.
 - **Artist facts** come from a built-in list (`server/creators.js`) and,
   for anyone else, from MusicBrainz (`providers/musicbrainz.js`): where
   they're from, sounds from community tags (kept only when they're sounds
@@ -90,6 +95,19 @@ one; the two tags it co-occurs with most describe it. A cluster is kept only
 if at least two saves firmly support it and its saves span more than one
 kind of thing or more than one app. Each cluster lists its evidence by tier,
 so the UI can say *why jazz*.
+
+**Connections** (`connectSaves`): every save is tied to the few others it
+shares the most with. Strength is the sum, over shared firm attributes, of
+the lower confidence × how much that kind of attribute says about taste
+(artist 1.4, sound and food 1, things 0.9, vibe 0.8, place 0.7, era 0.5,
+time 0.4, price 0.3); very broad tags ("food", "art") count for 0.3. Only
+saves that share a tag are compared, through an index by tag. The drawer
+shows each save's ties ("Tied to Blue in Green, by Miles Davis, jazz").
+
+**The taste board** (`tasteBoard`): your strongest tastes (at most four
+moods and three of anything else, so it's a mix), each with a weight
+relative to the top one, its facet, its side and the saves behind it, and
+threads between tastes that turn up together in at least two saves.
 
 ### Your Tastemate character
 
@@ -118,6 +136,14 @@ character (`tasteCharacter`), never as a chart:
   outright, only sounds and things (never moods, places or eras): the
   things to broaden into. Next turns them into *Something a little different*.
 - **Taste twin:** the friend whose profile is closest, and what you share.
+- **Everything is connected:** the taste board drawn as a crossword pinned
+  around your character (and your photo): each taste a word in letter
+  blocks, bigger blocks for bigger loves, coloured by facet, tied to you with
+  red string, with dashed threads between tastes that go together. Tap a
+  word to light up what it's tied to. On phones the words wrap below you.
+- **Profile photo:** each person has their character and, if they like, a
+  photo, cropped and shrunk to 320px in the browser and shown as a taped
+  polaroid on the character card and in the top bar.
 
 It's drawn as a playful card with a cartoon emblem (`TasteArt`), sticker-
 style side cards and dial knobs. Side colours are three categorical slots
@@ -129,28 +155,27 @@ hints dashed.
 
 ### Look and feel
 
-A lifestyle app should feel like a treat, so the visual language is cute,
-soft and a little playful, while staying calm enough to scan:
+Wes Anderson colours meet Pop Mart toys, on paper white, with the idea that
+*everything is connected* running through it (red string, pins, crosswords):
 
-- **Palette:** pastels after Pop Mart's Crybaby art and Monet's water
-  lilies (blush pink, lilac, sky, mint, butter, peach) on cream, with plum
-  instead of black for text. A soft, blurred Monet wash sits behind every
-  page. Dark mode is a plum night with the same pastels glowing. Side colours
-  that identify things (lilac, pink, sky) are validated as a set for
-  colour-blind separation on both themes; mint and butter stay decorative.
-- **Character art:** the Tastemate mascot, a round big-eyed character with
-  blush cheeks and a single tear, tinted by your top side and holding a
-  sticker of your taste. It blinks and bobs, appears on sign-in, on You, in
-  the Host banner and in empty states. Taste stickers have plum outlines on
-  pastel and light outlines on dark.
-- **Type:** Fredoka (rounded) for headlines, Nunito for text, 16px base.
-- **Interaction:** candy buttons with a chunky edge that squishes on press,
-  cards that lift and tilt on hover, stickers that wiggle, dial knobs that
-  spring into place, pages and sections that float in, bouncy toasts, a
-  floating tab bar on phones. Everything respects reduced-motion settings.
-- **Spacing:** a consistent rhythm (24px radius cards, 56–60px between
-  sections, generous padding), short reasons on cards with the detail one
-  tap away.
+- **Palette:** flat Wes Anderson blocks (Mendl's pink, sky, butter, mint,
+  peach, lilac, cream) with navy ink and a coral accent; red string
+  (`--thread`) for anything that ties things together. Dark mode is navy
+  with the same blocks. Side colours (teal, coral, violet) are validated as
+  a set for colour-blind separation on both themes.
+- **Objects for things:** events are old movie tickets (ADMIT ONE, a stub
+  with the date, a barcode and a serial number), places are polaroids,
+  products have price tags, music is vinyl that spins on hover, and the Host
+  moodboard is a cork board of pinned polaroids tied with red string.
+- **Character art:** the Tastemate mascot, a round big-eyed Crybaby-ish
+  character with blush cheeks and a single tear, holding a sticker of your
+  taste, on a candy-striped pastry-box card. It blinks and bobs.
+- **Type:** Jost for headlines (geometric, a little retro), Nunito for
+  text, 16px base.
+- **Interaction:** outlined buttons and cards with a hard offset shadow
+  that press flat, cards that tilt on hover, stickers that wiggle, pages
+  that float in, a floating tab bar on phones. Everything respects
+  reduced-motion settings.
 
 ## 5. Taste → action
 
@@ -168,6 +193,12 @@ advertises to you. Filters: city (products without a city ship anywhere),
 and events must overlap the chosen dates. Reasons come from your own saves,
 grouped by app ("jazz: 4 on Spotify, 2 on Google Maps, 3 more could be"),
 plus friends, new openings and hidden gems.
+
+**Make a night of it** (`pairSpots`): each top event is paired with the
+best-matching place within 1.5 km in the same city (taste first, a little
+for being closer), with the walk in minutes and the tastes it's picked for:
+*the screening, and a café a doorstep from the cinema*. Spots carry
+coordinates for this.
 
 ### Events from posts (`server/posts.js`)
 
@@ -189,12 +220,16 @@ little of the wider profile. Hand-written idea lists for drinks, food and
 records each carry tags in the same vocabulary and are scored against it.
 The invitation takes the theme's type style, motif and palette (darkest
 colour as background, readable text, most vivid readable accent). The
-moodboard is the user's own saves that carry the theme, alternating kinds.
+moodboard is the user's own saves that carry the theme, alternating kinds,
+pinned up as a collage. **Throw it at:** the place in the chosen city that
+best fits the theme ("throw a Moody jazz supper at the candlelit wine bar").
+**Your style of the night:** the dress line and the theme's colours to
+wear.
 
 ## 6. Data model
 
 ```
-users(id, username, display_name, password_hash, home_city, created_at)
+users(id, username, display_name, password_hash, home_city, avatar?, avatar_at?, created_at)
 sessions(token, user_id, expires_at)
 friendships(requester_id, addressee_id, status[pending|accepted], created_at)
 saves(id, user_id, kind[song|place|look|product|art|food|event|other], title, creator,
@@ -203,7 +238,7 @@ saves(id, user_id, kind[song|place|look|product|art|food|event|other], title, cr
       UNIQUE(user_id, source, external_key)        -- re-imports are idempotent
 spots(id, kind[event|place|product], title, city, venue, creators[], tags[], description,
       starts_at, ends_at, opened_at, price, url, popularity 0..1, source, external_id,
-      is_demo, added_by?)
+      lat?, lng?, is_demo, added_by?)
 spot_dismissals(user_id, spot_id)
 creator_facts(name, facts?, fetched_at)            -- MusicBrainz answers, null = no match
 ```

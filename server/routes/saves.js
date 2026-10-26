@@ -3,7 +3,7 @@ import { requireUser } from '../auth.js';
 import { friendIds, hydrateSave, hydrateSpot, tx, upsertSpot } from '../db.js';
 import { parseImport } from '../importers.js';
 import { SAVE_KINDS, SAVE_SOURCES, autoTag, cleanTags, guessKind } from '../taxonomy.js';
-import { cosine, findPatterns, interpret, perfectDay, rankSpots, tasteCharacter, tasteProfile, toPercent } from '../taste-graph.js';
+import { connectSaves, cosine, findPatterns, interpret, pairSpots, perfectDay, rankSpots, tasteBoard, tasteCharacter, tasteProfile, toPercent } from '../taste-graph.js';
 import { loadCreatorCache } from '../enrich.js';
 import { parsePost } from '../posts.js';
 import { OCCASIONS, planOccasion } from '../occasions.js';
@@ -33,7 +33,15 @@ export default function savesRoutes(r, { db, venueFeed, enricher }) {
   // ----- Saves -----
   r.get('/saves', requireUser, (req, res) => {
     // Each save comes with its breakdown: what it says, grouped by facet.
-    const all = readSaves(req.user.id).map(({ signals, ...s }) => ({ ...s, facets: breakdown(signals) }));
+    const read = readSaves(req.user.id);
+    // What each save links to, and why.
+    const titles = new Map(read.map((s) => [s.id, s.title]));
+    const links = new Map();
+    for (const e of connectSaves(read)) {
+      links.set(e.a, [...(links.get(e.a) || []), { id: e.b, title: titles.get(e.b), because: e.because }]);
+      links.set(e.b, [...(links.get(e.b) || []), { id: e.a, title: titles.get(e.a), because: e.because }]);
+    }
+    const all = read.map(({ signals, ...s }) => ({ ...s, facets: breakdown(signals), links: (links.get(s.id) || []).slice(0, 3) }));
     const count = (key) => all.reduce((m, s) => ({ ...m, [s[key]]: (m[s[key]] || 0) + 1 }), {});
     res.json({ saves: all, counts: { kind: count('kind'), source: count('source') }, kinds: SAVE_KINDS, sources: SAVE_SOURCES, lookingUp: enricher.pending() });
   });
@@ -124,6 +132,7 @@ export default function savesRoutes(r, { db, venueFeed, enricher }) {
     }
     res.json({
       character: tasteCharacter(saves, clusters, profile),
+      board: tasteBoard(saves, clusters, profile),
       day,
       city,
       twin,
@@ -161,6 +170,8 @@ export default function savesRoutes(r, { db, venueFeed, enricher }) {
 
     const exclude = new Set([...savedSpots, ...dismissed]);
     const ranked = rankSpots({ profile, saves, spots, city, from, to, friendSaves, exclude, today });
+    // Make a night of it: a show, and somewhere you'd love a short walk away.
+    const pairs = pairSpots({ events: ranked.filter((x) => x.spot.kind === 'event'), places: ranked.filter((x) => x.spot.kind === 'place'), profile });
     const group = (kind) => ranked.filter((x) => x.spot.kind === kind).slice(0, PER_KIND[kind]);
     const shown = new Set(['event', 'place', 'product'].flatMap((k) => group(k).map((x) => x.spot.id)));
 
@@ -185,6 +196,7 @@ export default function savesRoutes(r, { db, venueFeed, enricher }) {
       events: group('event'),
       places: group('place'),
       products: group('product'),
+      pairs,
       stretch,
       // What you already saved there and may have forgotten about.
       canRefreshPosts: !!venueFeed,
@@ -264,12 +276,16 @@ export default function savesRoutes(r, { db, venueFeed, enricher }) {
     const me = req.user.id;
     const saves = readSaves(me);
     const profile = tasteProfile(saves);
-    const city = homeCity(me);
-    const shop = visibleSpots(me).filter((x) => x.kind !== 'event' && (!x.city || !city || x.city.toLowerCase() === city.toLowerCase()));
+    const known = cities();
+    const city = known.find((c) => c.toLowerCase() === String(req.query.city || '').toLowerCase()) || homeCity(me);
+    const here = visibleSpots(me).filter((x) => x.kind !== 'event' && (!x.city || !city || x.city.toLowerCase() === city.toLowerCase()));
+    const shop = here.filter((x) => x.kind === 'product' || x.tags.includes('wine bar') || x.tags.includes('pastry'));
+    const venues = here.filter((x) => x.kind === 'place' && x.city);
     const theme = req.query.theme != null && req.query.theme !== '' ? Number(req.query.theme) : null;
     res.json({
-      ...planOccasion({ type: OCCASIONS[req.query.type] ? req.query.type : 'dinner', clusters: findPatterns(saves), theme, profile, saves, shop }),
+      ...planOccasion({ type: OCCASIONS[req.query.type] ? req.query.type : 'dinner', clusters: findPatterns(saves), theme, profile, saves, shop, venues }),
       city,
+      cities: known,
     });
   });
 

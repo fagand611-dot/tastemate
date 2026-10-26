@@ -83,7 +83,7 @@ export const VIBE_KEYWORDS = {
   disco: ['house', 'high-energy', 'nostalgic'],
   vinyl: ['vinyl', 'vintage'],
   'record store': ['vinyl', 'vintage'],
-  'listening bar': ['vinyl', 'jazz', 'intimate'],
+  'listening bar': ['vinyl', 'jazz', 'intimate', 'night out@0.6'],
   folk: ['folk', 'chill'],
   acoustic: ['folk', 'intimate'],
   ambient: ['ambient', 'atmospheric'],
@@ -103,22 +103,22 @@ export const VIBE_KEYWORDS = {
   design: ['design', 'minimal'],
   architecture: ['design', 'architecture'],
   brutalist: ['architecture', 'minimal', 'dark'],
-  pastry: ['pastry', 'food'],
-  croissant: ['pastry', 'food'],
-  bakery: ['pastry', 'food', 'cozy'],
+  pastry: ['pastry', 'food', 'daytime@0.6'],
+  croissant: ['pastry', 'food', 'daytime@0.6'],
+  bakery: ['pastry', 'food', 'cozy', 'daytime@0.7'],
   patisserie: ['pastry', 'food'],
   viennoiserie: ['pastry', 'food'],
-  coffee: ['coffee', 'cozy'],
-  cafe: ['coffee', 'cozy'],
+  coffee: ['coffee', 'cozy', 'daytime@0.6'],
+  cafe: ['coffee', 'cozy', 'daytime@0.6'],
   'specialty coffee': ['coffee', 'minimal'],
   matcha: ['coffee', 'minimal'],
-  'wine bar': ['wine bar', 'intimate', 'romantic'],
+  'wine bar': ['wine bar', 'intimate', 'romantic', 'night out@0.6'],
   'natural wine': ['wine bar', 'intimate'],
   wine: ['wine bar'],
-  cocktail: ['cocktails', 'intimate'],
-  speakeasy: ['cocktails', 'intimate', 'moody'],
-  rooftop: ['rooftop', 'lively'],
-  candlelit: ['moody', 'intimate', 'romantic'],
+  cocktail: ['cocktails', 'intimate', 'night out@0.7'],
+  speakeasy: ['cocktails', 'intimate', 'moody', 'night out'],
+  rooftop: ['rooftop', 'lively', 'night out@0.5'],
+  candlelit: ['moody', 'intimate', 'romantic', 'night out@0.5'],
   candle: ['moody', 'cozy'],
   moody: ['moody', 'dark', 'atmospheric'],
   'dark academia': ['dark academia', 'moody', 'vintage', 'cerebral'],
@@ -132,7 +132,7 @@ export const VIBE_KEYWORDS = {
   minimalist: ['minimal'],
   linen: ['minimal', 'chill'],
   vintage: ['vintage', 'nostalgic'],
-  thrift: ['vintage'],
+  thrift: ['vintage', 'budget@0.6'],
   streetwear: ['streetwear', 'high-energy'],
   sneaker: ['streetwear'],
   gorpcore: ['outdoors', 'streetwear'],
@@ -145,26 +145,38 @@ export const VIBE_KEYWORDS = {
   library: ['books', 'cerebral'],
   poetry: ['books', 'intimate', 'emotional'],
   cinema: ['film', 'atmospheric'],
+  film: ['film'],
+  movie: ['film'],
+  criterion: ['film', 'cerebral'],
+  screening: ['film'],
   'film club': ['film', 'cerebral'],
-  noodle: ['food', 'street food'],
-  'street food': ['food', 'street food', 'lively'],
-  market: ['market', 'lively'],
-  'night market': ['market', 'street food', 'lively'],
-  omakase: ['food', 'intimate', 'luxe'],
-  'tasting menu': ['food', 'luxe'],
-  ramen: ['food', 'street food'],
+  noodle: ['food', 'noodles', 'street food@0.7', 'casual@0.6', 'budget@0.5'],
+  'street food': ['food', 'street food', 'lively', 'casual', 'budget@0.7', 'night out@0.5'],
+  market: ['market', 'lively', 'daytime@0.5'],
+  'night market': ['market', 'street food', 'lively', 'night out', 'budget@0.7'],
+  omakase: ['food', 'japanese', 'intimate', 'luxe', 'splurge'],
+  'tasting menu': ['food', 'luxe', 'splurge'],
+  ramen: ['food', 'noodles', 'japanese', 'casual@0.6'],
   thai: ['food', 'thai'],
-  izakaya: ['food', 'intimate', 'lively'],
-  rave: ['techno', 'high-energy', 'lively'],
-  club: ['lively', 'high-energy'],
+  pizza: ['food', 'pizza', 'casual', 'budget@0.5'],
+  sushi: ['food', 'japanese'],
+  brunch: ['food', 'daytime', 'coffee@0.5'],
+  breakfast: ['food', 'daytime'],
+  'late night': ['night out'],
+  'free entry': ['budget'],
+  cheap: ['budget'],
+  michelin: ['food', 'luxe', 'splurge'],
+  izakaya: ['food', 'japanese', 'intimate', 'lively', 'night out@0.7'],
+  rave: ['techno', 'high-energy', 'lively', 'night out'],
+  club: ['lively', 'high-energy', 'night out@0.7'],
   'live music': ['live music', 'lively'],
   gig: ['live music', 'lively'],
   concert: ['live music'],
   festival: ['live music', 'lively', 'epic'],
   sauna: ['wellness', 'chill'],
-  spa: ['wellness', 'chill', 'luxe'],
+  spa: ['wellness', 'chill', 'luxe', 'splurge@0.6'],
   yoga: ['wellness', 'chill'],
-  luxury: ['luxe'],
+  luxury: ['luxe', 'splurge'],
   cozy: ['cozy'],
   cosy: ['cozy'],
   'hidden gem': ['hidden gem'],
@@ -229,29 +241,42 @@ const KIND_HINTS = [
   ['art', ['art', 'photography', 'architecture']],
 ];
 
+// "night out@0.5": the keyword points that way, but only partly.
+const weighted = (tags) => tags.map((t) => {
+  const [tag, w] = t.split('@');
+  return [tag, w ? Number(w) : 1];
+});
 const KEYWORD_RES = Object.entries(VIBE_KEYWORDS)
   .sort((a, b) => b[0].length - a[0].length)
-  .map(([k, tags]) => [new RegExp(`(^|[^a-z])${k.replace(/[-]/g, '[- ]?')}(s|es)?([^a-z]|$)`, 'i'), k, tags]);
+  .map(([k, tags]) => [new RegExp(`(^|[^a-z])${k.replace(/[-]/g, '[- ]?')}(s|es)?([^a-z]|$)`, 'i'), k, weighted(tags)]);
 // Single words long enough to spot inside a run-together handle.
 const HANDLE_WORDS = Object.entries(VIBE_KEYWORDS)
   .filter(([k]) => k.length >= 5 && /^[a-z -]+$/.test(k))
-  .map(([k, tags]) => [k.replace(/[ -]/g, ''), tags]);
+  .map(([k, tags]) => [k.replace(/[ -]/g, ''), weighted(tags)]);
 
 // Every signal belongs to a facet, so one save breaks down into who, how it
 // sounds, how it feels, where and when.
-export const FACETS = ['artist', 'sound', 'vibe', 'place', 'era', 'thing'];
-const VIBES = new Set(['dark', 'tense', 'cerebral', 'emotional', 'uplifting', 'funny', 'romantic', 'atmospheric', 'high-energy', 'chill', 'epic', 'weird', 'nostalgic', 'gritty', 'moody', 'intimate', 'cozy', 'lively', 'warm', 'minimal', 'vintage', 'luxe', 'classic', 'hidden gem']);
+export const FACETS = ['artist', 'sound', 'food', 'vibe', 'place', 'time', 'price', 'era', 'thing'];
+const VIBES = new Set(['casual', 'dark', 'tense', 'cerebral', 'emotional', 'uplifting', 'funny', 'romantic', 'atmospheric', 'high-energy', 'chill', 'epic', 'weird', 'nostalgic', 'gritty', 'moody', 'intimate', 'cozy', 'lively', 'warm', 'minimal', 'vintage', 'luxe', 'classic', 'hidden gem']);
 const SOUNDS = new Set([...MUSIC_GENRES, ...Object.keys(SOUND_PARENTS), 'poetry']);
+const FOODS = new Set(['food', 'pastry', 'coffee', 'street food', 'thai', 'noodles', 'pizza', 'japanese', 'wine bar', 'cocktails']);
+const TIMES = new Set(['night out', 'daytime']);
+const PRICES = new Set(['budget', 'splurge']);
 const PLACES = new Set([
   ...Object.values(CREATORS).map((c) => c.from.toLowerCase()),
   'bangkok', 'london', 'dublin', 'tokyo', 'paris', 'new york', 'berlin', 'lisbon', 'barcelona', 'amsterdam', 'copenhagen', 'seoul', 'mexico city',
 ]);
+
+const PLACE_RES = [...PLACES].map((c) => [new RegExp(`(^|[^a-z])${c.replace(/[.,]/g, '\\$&')}([^a-z]|$)`, 'i'), c]);
 
 /** Which facet a tag belongs to. */
 export function facetOf(tag) {
   if (/^\d{4}s$/.test(tag)) return 'era';
   if (PLACES.has(tag)) return 'place';
   if (SOUNDS.has(tag)) return 'sound';
+  if (FOODS.has(tag)) return 'food';
+  if (TIMES.has(tag)) return 'time';
+  if (PRICES.has(tag)) return 'price';
   if (VIBES.has(tag)) return 'vibe';
   return 'thing';
 }
@@ -262,21 +287,23 @@ export function facetOf(tag) {
  *   translated  something that means it ("listening bar", "@croissantdiaries"
  *               → pastry), or a fact about the artist (Olivia Dean → neo-soul,
  *               London, 2020s)
- * Returns [{ tag, tier, via, facet }], strongest tier per tag. "Could be"
+ * Returns [{ tag, tier, via, facet, w }], strongest tier per tag; w (0–1) is
+ * how strongly the save points that way ("street food" is only partly a
+ * night out). "Could be"
  * signals come later, from associations and the user's own patterns
  * (taste-graph.js). `cache` holds artists looked up on MusicBrainz.
  */
 export function readSignals({ title, creator, collection, note } = {}, cache = null) {
   const s = [title, creator, collection, note].filter(Boolean).join(' · ');
   const out = new Map();
-  const put = (tag, tier, via, facet = facetOf(tag)) => {
+  const put = (tag, tier, via, facet = facetOf(tag), w = 1) => {
     const prev = out.get(tag);
-    if (!prev || (prev.tier === 'translated' && tier === 'obvious')) out.set(tag, { tag, tier, via, facet });
+    if (!prev || (prev.tier === 'translated' && tier === 'obvious') || (prev.tier === tier && w > prev.w)) out.set(tag, { tag, tier, via, facet, w });
   };
   if (!s) return [];
   for (const [re, k, tags] of KEYWORD_RES) {
     if (!re.test(s)) continue;
-    for (const t of tags) put(t, t === k ? 'obvious' : 'translated', k);
+    for (const [t, w] of tags) put(t, t === k ? 'obvious' : 'translated', k, undefined, w);
   }
   // Handles run words together ("croissantdiaries", "concrete.daily"). Only
   // look inside things that are handles, so "candlelit" isn't read as "candle".
@@ -284,9 +311,11 @@ export function readSignals({ title, creator, collection, note } = {}, cache = n
   if (creator && !/\s/.test(creator)) handles.push(creator.toLowerCase());
   for (const token of new Set(handles)) {
     for (const [k, tags] of HANDLE_WORDS) {
-      if (token.includes(k)) for (const t of tags) put(t, 'translated', `“${token}” contains “${k}”`);
+      if (token.includes(k)) for (const [t, w] of tags) put(t, 'translated', `“${token}” contains “${k}”`, undefined, w);
     }
   }
+  // Cities named in the text ("Bangkok trip") are places.
+  for (const [re, city] of PLACE_RES) if (re.test(s)) put(city, 'obvious', city, 'place');
   // Genres only from short phrases ("Pink Moon · folk"), never mid-sentence,
   // so "pop-up" or "the house special" don't count as music.
   const phrases = s.toLowerCase().split(/[·,/|\n]/).map((x) => x.trim()).filter((x) => x && x.split(/\s+/).length <= 3);

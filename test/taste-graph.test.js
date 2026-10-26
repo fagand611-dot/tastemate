@@ -2,10 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { autoTag, guessKind, readSignals } from '../server/taxonomy.js';
 import { cityFrom, csv, parseImport } from '../server/importers.js';
-import { cosine, findPatterns, inWindow, interpret, perfectDay, rankSpots, tasteCharacter, tasteProfile, toPercent } from '../server/taste-graph.js';
+import { connectSaves, cosine, distanceM, findPatterns, inWindow, interpret, pairSpots, perfectDay, rankSpots, tasteBoard, tasteCharacter, tasteProfile, toPercent } from '../server/taste-graph.js';
 
 test('autoTag: keywords and music genres become shared tags', () => {
-  assert.deepEqual(new Set(autoTag('Candlelit wine bar')), new Set(['moody', 'intimate', 'romantic', 'wine bar']));
+  assert.deepEqual(new Set(autoTag('Candlelit wine bar')), new Set(['moody', 'intimate', 'romantic', 'wine bar', 'night out']));
+  assert.deepEqual(new Set(autoTag('Noodle street shop', null, 'Bangkok trip')), new Set(['food', 'noodles', 'street food', 'casual', 'budget', 'bangkok']));
   assert.ok(autoTag('Croissants', null).includes('pastry'));
   assert.ok(autoTag('late night jazz').includes('chill'));
   assert.ok(!autoTag('Passenger').includes('pastry'));
@@ -172,4 +173,48 @@ test('tasteCharacter: a name from your strongest taste, your sides, apps and str
   assert.ok(c.stretch.includes('coffee'), 'pastry hints at coffee, which you have not saved');
   assert.ok(!c.stretch.some((t) => ['chill', 'intimate', 'moody'].includes(t)), 'moods are not something to try');
   assert.equal(tasteCharacter([], [], new Map()), null);
+});
+
+test('connectSaves: saves tie together through shared attributes, weighted by kind', () => {
+  const saves = [
+    save(1, 'song', 'spotify', ['jazz', 'chill'], { creator: 'Miles Davis' }),
+    save(2, 'song', 'spotify', ['jazz', 'moody'], { creator: 'Miles Davis' }),
+    save(3, 'place', 'google_maps', ['jazz', 'wine bar', 'moody']),
+    save(4, 'food', 'instagram', ['food']),
+    save(5, 'food', 'instagram', ['food']),
+  ];
+  const links = connectSaves(saves);
+  const pair = (a, b) => links.find((e) => (e.a === a && e.b === b) || (e.a === b && e.b === a));
+  assert.ok(pair(1, 2), 'same artist and sound');
+  assert.ok(pair(1, 2).because.includes('Miles Davis'));
+  assert.ok(pair(1, 2).strength > (pair(2, 3)?.strength ?? 0), 'a shared artist outweighs a shared mood');
+  assert.ok(pair(2, 3)?.because.includes('jazz'));
+  assert.equal(pair(4, 5), undefined, 'just "food" is too broad to tie two saves');
+});
+
+test('tasteBoard: a mix of tastes, weighted, with threads between the ones that go together', () => {
+  const saves = [1, 2, 3, 4].map((i) => save(i, 'place', 'google_maps', ['jazz', 'moody', 'wine bar', 'dublin']));
+  saves.push(save(5, 'food', 'instagram', ['pastry', 'coffee']));
+  const profile = tasteProfile(saves);
+  const board = tasteBoard(saves, findPatterns(saves), profile);
+  const jazz = board.tastes.find((t) => t.tag === 'jazz');
+  assert.equal(jazz.saves, 4);
+  assert.ok(jazz.weight > board.tastes.find((t) => t.tag === 'pastry').weight);
+  assert.ok(board.tastes.every((t) => t.weight > 0 && t.weight <= 1 && t.facet));
+  assert.ok(board.threads.some((t) => [t.a, t.b].sort().join() === 'jazz,moody' && t.n === 4));
+  assert.ok(!board.threads.some((t) => [t.a, t.b].includes('pastry')), 'one save together is not a thread');
+});
+
+test('pairSpots: each event gets the best place within walking distance, in the same city', () => {
+  const spot = (id, kind, lat, lng, tags, city = 'Dublin') => ({ spot: { id, kind, lat, lng, tags, city }, score: 0.5 });
+  assert.ok(Math.abs(distanceM({ lat: 53.3449, lng: -6.2675 }, { lat: 53.3438, lng: -6.2546 }) - 860) < 30);
+  const profile = new Map([['coffee', 1], ['vinyl', 0.6]]);
+  const events = [spot(1, 'event', 53.3449, -6.2675, ['jazz']), spot(2, 'event', 13.75, 100.5, ['film'], 'Bangkok')];
+  const near = spot(10, 'place', 53.3452, -6.2660, ['coffee', 'vinyl']);
+  const far = { ...spot(11, 'place', 53.36, -6.20, ['coffee']), score: 0.9 };
+  const pairs = pairSpots({ events, places: [far, near], profile });
+  assert.equal(pairs.length, 1, 'no place near the Bangkok screening');
+  assert.equal(pairs[0].place.spot.id, 10);
+  assert.ok(pairs[0].walk >= 1 && pairs[0].walk <= 3);
+  assert.deepEqual(pairs[0].because, ['coffee', 'vinyl']);
 });
