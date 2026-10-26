@@ -151,6 +151,19 @@ function migrate(db) {
   if (!has('spots', 'lat')) db.exec('ALTER TABLE spots ADD COLUMN lat REAL; ALTER TABLE spots ADD COLUMN lng REAL');
   if (!has('spots', 'image')) db.exec('ALTER TABLE spots ADD COLUMN image TEXT');
   if (!has('users', 'avatar')) db.exec('ALTER TABLE users ADD COLUMN avatar TEXT; ALTER TABLE users ADD COLUMN avatar_at TEXT');
+  clearCsvJunk(db);
+}
+
+// Before Spotify CSVs were understood, each line of one became a "song" whose
+// title (or artist, where the line had a " - " in it) was the raw CSV line,
+// and those artists were queued for lookup. Real titles and artist names
+// never contain a Spotify URI or link, so those rows are safe to remove.
+const CSV_JUNK = ['%spotify:track:%', '%spotify:playlist:%', '%spotify:album:%', '%open.spotify.com/%', 'category,title,%', 'playlist_name,playlist_url%', 'liked_song,%'];
+
+function clearCsvJunk(db) {
+  const where = (col) => CSV_JUNK.map(() => `${col} LIKE ?`).join(' OR ');
+  db.prepare(`DELETE FROM saves WHERE source = 'spotify' AND (${where('title')} OR ${where('coalesce(creator, \'\')')})`).run(...CSV_JUNK, ...CSV_JUNK);
+  db.prepare(`DELETE FROM creator_facts WHERE ${where('name')}`).run(...CSV_JUNK);
 }
 
 /** Run fn inside a transaction. */

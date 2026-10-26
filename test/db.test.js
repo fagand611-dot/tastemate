@@ -34,3 +34,23 @@ test('openDb upgrades a database made by an earlier version', () => {
   db.close();
   assert.doesNotThrow(() => openDb(file).close());
 });
+
+test('openDb clears the junk saves left by Spotify CSVs read as plain lines', () => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'tm-')), 'junk.db');
+  const db = openDb(file);
+  db.exec(`INSERT INTO users (id, username, display_name, password_hash) VALUES (1, 'u', 'U', 'x')`);
+  const add = db.prepare(`INSERT INTO saves (user_id, kind, title, creator, source, tags, external_key) VALUES (1, 'song', ?, ?, ?, '[]', ?)`);
+  add.run('playlist_name,playlist_url,playlist_uri,position,track_title', null, 'spotify', 'k1');
+  add.run('liked_song,Night Changes,One Direction,spotify:track:5iX,https://open.spotify.com/track/5iX?si=4,False,PLAYABLE;SAVED,228533', null, 'spotify', 'k2');
+  add.run('Acoustic Dance Version,Shary-An,spotify:track:0EE,https://open.spotify.com/track/0EE,False,PLAYABLE;SAVED,210960', 'liked_song,Paparazzi', 'spotify', 'k3');
+  add.run('Night Changes', 'One Direction', 'spotify', 'spotify:track:5iX');
+  add.run('Paparazzi - Acoustic Dance Version', 'Shary-An', 'spotify', 'spotify:track:0EE');
+  add.run('Notes on spotify:track:links', null, 'pinterest', 'k6');
+  db.prepare('INSERT INTO creator_facts (name, facts) VALUES (?, NULL), (?, NULL)').run('liked_song,paparazzi', 'one direction');
+  db.close();
+
+  const again = openDb(file);
+  assert.deepEqual(again.prepare('SELECT title FROM saves ORDER BY id').all().map((r) => r.title), ['Night Changes', 'Paparazzi - Acoustic Dance Version', 'Notes on spotify:track:links'], 'only the junk goes; real songs and other apps stay');
+  assert.deepEqual(again.prepare('SELECT name FROM creator_facts').all().map((r) => r.name), ['one direction']);
+  again.close();
+});
