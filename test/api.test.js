@@ -336,3 +336,44 @@ test('instagram: importing posts then collections fills in the collection, witho
   assert.ok(s.tags.includes('pastry'));
   assert.equal((await me.post('/saves/import', { source: 'instagram', text: cols })).body.skipped, 1, 'a third time changes nothing');
 });
+
+test('invites: a link guests open without an account, answer, and change their answer; the host sees who', async () => {
+  const host = await signup('hostess');
+  const payload = { occasion: 'Dinner party', headline: 'Candlelit jazz supper', line: 'Come for dinner', when: 'Saturday, 8pm', where: 'at mine', dress: 'Tweed and knits', type: 'serif-italic', motif: 'record', colors: { bg: '#2a1f1d', ink: '#f6f1e7', accent: '#d9a441' }, palette: ['#2a1f1d', 'not-a-colour'], records: ['So What · Miles Davis'], menu: ['Anchovy toast'], extra: '<script>' };
+  const made = await host.post('/invites', payload);
+  assert.equal(made.status, 201);
+  const { token } = made.body;
+  assert.match(token, /^[\w-]{12}$/);
+  assert.equal((await host.post('/invites', { headline: '' })).status, 400);
+
+  // A guest: no account, no cookie.
+  const open = async () => (await fetch(`${base}/invites/${token}`)).json();
+  const seen = await open();
+  assert.equal(seen.invite.headline, 'Candlelit jazz supper');
+  assert.deepEqual(seen.invite.palette, ['#2a1f1d'], 'only real colours get through');
+  assert.equal(seen.invite.extra, undefined, 'nothing but the invite’s own fields');
+  assert.equal(seen.host.name, 'hostess');
+  assert.equal(seen.isHost, false);
+  const rsvp = (body) => fetch(`${base}/invites/${token}/rsvp`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  assert.equal((await rsvp({ name: 'Maya Lee', answer: 'yes', note: 'Bringing wine' })).status, 200);
+  assert.equal((await rsvp({ name: 'Sam', answer: 'maybe' })).status, 200);
+  assert.equal((await rsvp({ name: 'sam', answer: 'no' })).status, 200, 'the same name changes its answer');
+  assert.equal((await rsvp({ name: '', answer: 'yes' })).status, 400);
+  assert.equal((await rsvp({ name: 'X', answer: 'definitely' })).status, 400);
+  const after = await open();
+  assert.deepEqual(after.counts, { yes: 1, maybe: 0, no: 1 });
+  assert.deepEqual(after.going, ['Maya'], 'guests see first names only');
+  assert.equal(after.rsvps, undefined, 'notes are for the host');
+
+  // The host sees the answers, can change the details on the same link, and delete it.
+  const mine = (await host.get(`/invites/${token}`)).body;
+  assert.equal(mine.isHost, true);
+  assert.deepEqual(mine.rsvps.map((r) => [r.name, r.answer, r.note]), [['Maya Lee', 'yes', 'Bringing wine'], ['Sam', 'no', null]]);
+  await host.put(`/invites/${token}`, { ...payload, when: 'Sunday, 7pm' });
+  assert.equal((await open()).invite.when, 'Sunday, 7pm');
+  const other = await signup('notthehost');
+  assert.equal((await other.put(`/invites/${token}`, payload)).status, 404, 'only the host can change it');
+  assert.equal((await host.get('/invites')).body.invites[0].rsvps.length, 2);
+  await host.del(`/invites/${token}`);
+  assert.equal((await fetch(`${base}/invites/${token}`)).status, 404);
+});

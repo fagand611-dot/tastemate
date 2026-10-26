@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { qs } from '../api.js';
 import Icon, { SPOT_ICON } from '../components/Icon.jsx';
-import { useActions } from '../components/actions.jsx';
 import Mascot from '../components/Mascot.jsx';
 import SpotPhoto from '../components/SpotPhoto.jsx';
 import TasteArt, { hasArt } from '../components/TasteArt.jsx';
 import { PinBoard, Vinyl, WES } from '../components/Retro.jsx';
 import { Empty, Loading, PageHead, useApi } from '../components/ui.jsx';
 import { Dialog } from '../components/viz.jsx';
+import { InviteCard, SendInvite } from '../components/InviteCard.jsx';
 import { MascotFace } from '../components/Mascot.jsx';
 import { useAuth } from '../App.jsx';
 
@@ -69,6 +69,13 @@ function Plan({ d }) {
   const [where, setWhere] = useState(d.venue ? d.venue.spot.title : 'at mine');
   const records = [...d.playlist.fromSaves.map((x) => ({ ...x, mine: true })), ...d.playlist.more];
   const ink = d.invite.colors;
+  // What the invite link shows guests.
+  const payload = {
+    occasion: d.occasion.label, headline: d.invite.headline, line: d.invite.line, when, where, dress: d.invite.dress,
+    type: d.invite.type, motif: d.invite.motif, colors: d.invite.colors, palette: d.theme.palette,
+    records: records.slice(0, 3).map((x) => `${x.title}${x.creator ? ` · ${x.creator}` : ''}`),
+    menu: [...d.food.snacks, ...d.food.main, ...d.food.sweet].map((x) => x.name),
+  };
 
   // Everything in the envelope, and what each one opens.
   const items = [
@@ -123,7 +130,7 @@ function Plan({ d }) {
   ].filter(Boolean);
 
   const views = {
-    invite: ['Send the invite', <Invite invite={d.invite} when={when} where={where} setWhen={setWhen} setWhere={setWhere} />],
+    invite: ['Send the invite', <Invite invite={d.invite} when={when} where={where} setWhen={setWhen} setWhere={setWhere} payload={payload} />],
     ticket: ['Your ticket', <Ticket d={d} when={when} where={where} />],
     menu: ['The menu', (
       <div className="host-grid two">
@@ -215,6 +222,7 @@ function Plan({ d }) {
       {open && (
         <section className="spread" aria-label="What’s inside">
           <p className="spread-head"><span>Inside</span> a {d.theme.name.toLowerCase()}, from {d.theme.from} of your saves</p>
+          <div className="spread-cta"><button className="btn btn-primary" onClick={() => setDetail('invite')}><Icon name="note" size={16} /> Send the invite</button></div>
           <div className="spread-grid">
             {items.map((it, i) => (
               <button key={it.key} className={`spread-item it-${it.key}`} style={{ '--d': `${i * 70}ms`, '--t': `${((i * 37) % 7) - 3}deg` }} onClick={() => setDetail(it.key)}>
@@ -398,41 +406,17 @@ function IdeaList({ title, items }) {
   );
 }
 
-const MOTIFS = {
-  record: <><circle cx="50" cy="50" r="40" /><circle cx="50" cy="50" r="28" /><circle cx="50" cy="50" r="6" /></>,
-  candle: <><path d="M44 40h12v50H44z" /><path d="M50 14c6 8 6 14 0 20-6-6-6-12 0-20z" /></>,
-  grid: <><path d="M10 10h80v80H10zM36 10v80M64 10v80M10 36h80M10 64h80" /></>,
-  sun: <><circle cx="50" cy="50" r="18" /><path d="M50 10v14M50 76v14M10 50h14M76 50h14M22 22l10 10M68 68l10 10M78 22 68 32M32 68 22 78" /></>,
-  arc: <><path d="M10 90a40 40 0 0 1 80 0" /><path d="M24 90a26 26 0 0 1 52 0" /></>,
-};
-
-/** A live preview of the invitation in the theme's type, colours and motif. */
-function Invite({ invite, when, where, setWhen, setWhere }) {
-  const { toast } = useActions();
-  const text = [invite.headline, invite.line, `${when}, ${where}`, invite.dress && `Dress: ${invite.dress}`].filter(Boolean).join('\n');
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast('Invitation text copied');
-    } catch {
-      toast('Couldn’t copy. Select the text instead.');
-    }
-  };
+/** The invitation: a live preview, the details, and the ways to send it. */
+function Invite({ invite, when, where, setWhen, setWhere, payload }) {
   return (
     <section className="panel invite-panel">
       <h2><Icon name="note" /> Send the invite</h2>
-      <div className={`invite type-${invite.type}`} style={{ '--bg': invite.colors.bg, '--ink': invite.colors.ink, '--accent': invite.colors.accent }}>
-        <svg className="invite-motif" viewBox="0 0 100 100" aria-hidden>{MOTIFS[invite.motif]}</svg>
-        <p className="invite-line">{invite.line}</p>
-        <h3>{invite.headline}</h3>
-        <p className="invite-when">{when}<br />{where}</p>
-        {invite.dress && <p className="invite-dress">Dress: {invite.dress}</p>}
-      </div>
+      <InviteCard invite={invite} when={when} where={where} />
       <div className="form-row">
         <input value={when} onChange={(e) => setWhen(e.target.value)} aria-label="When" />
         <input value={where} onChange={(e) => setWhere(e.target.value)} aria-label="Where" />
       </div>
-      <button className="btn btn-sm btn-outline" onClick={copy}>Copy invitation text</button>
+      <SendInvite payload={payload} />
     </section>
   );
 }

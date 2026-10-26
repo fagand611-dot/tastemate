@@ -327,6 +327,21 @@ so Spotify and Instagram can be connected rather than only imported.
   the daily re-sync until it is. Disconnecting deletes the tokens; saves
   stay.
 
+### Digital invites (`server/routes/invites.js`)
+
+From the envelope, **Send the invite** turns the invitation into a link
+(`/i/<token>`, 12 random characters). WhatsApp, email and text open with the
+message and link filled in; "Instagram & more" uses the phone's share sheet
+with the invitation drawn as a 1080×1350 picture (Instagram has no way for a
+website to write into DMs or stories, so this is the route), and on a
+desktop saves the picture and copies the link. Guests need no account: the
+page shows the invitation in its own colours, what to wear, the menu and
+the records, and three answers; answering again under the same name changes
+it. Guests see first names of who's coming; notes and full names are for
+the host. Only an invite's own fields are stored (checked colours, known
+motifs and type styles, capped lengths). Editing the details after sending
+updates the same link.
+
 ## 6. Data model
 
 ```
@@ -341,6 +356,8 @@ spots(id, kind[event|place|product], title, city, venue, creators[], tags[], des
       starts_at, ends_at, opened_at, price, url, popularity 0..1, source, external_id,
       lat?, lng?, image?, credit?, fetched_at?, is_demo, added_by?)
 spot_dismissals(user_id, spot_id)
+invites(id, token, user_id, payload, created_at, updated_at)
+rsvps(id, invite_id, name, answer[yes|maybe|no], note, created_at)   UNIQUE(invite_id, name)
 feed_runs(city_key, provider, fetched_at, ok, count, error)
 connections(user_id, provider, account_id, account_name, access_token*, refresh_token*,
       expires_at, scope, last_synced_at, last_added, last_error)   -- * sealed

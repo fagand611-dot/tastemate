@@ -208,7 +208,11 @@ the browser. Disconnecting deletes them; the saves already brought in stay.
   to throw it at, your style of the night, the night hour by hour, who's
   coming (friends with their taste titles and what each should bring),
   the scene, ice-breakers, a countdown, and where to pick things up in
-  your city.
+  your city. **Send the invite** makes a link and sends it on WhatsApp,
+  email or text, or through the phone's share sheet (Instagram, Messenger…)
+  with the invitation as a picture. Guests open it without an account, see
+  the invitation, the colours to wear, the menu and the records, and say
+  yes, maybe or can't make it; the host sees who's coming.
 - **Profile photo** next to your character, set from Account or the
   character card.
 - **Friends:** mutual friendships with a taste-match %, each friend shown

@@ -11,6 +11,7 @@ import You from './pages/You.jsx';
 import Host from './pages/Host.jsx';
 import Friends from './pages/Friends.jsx';
 import Me from './pages/Me.jsx';
+import InvitePage from './pages/InvitePage.jsx';
 
 const AuthCtx = createContext(null);
 export const useAuth = () => useContext(AuthCtx);
@@ -77,6 +78,8 @@ export default function App() {
       </div>
     );
   }
+  // Invite links are for guests: they open without signing in.
+  if (pathname.startsWith('/i/')) return <Routes><Route path="/i/:token" element={<InvitePage />} /></Routes>;
   if (user === undefined) return <div className="center"><div className="skeleton"><span /><span /></div></div>;
   if (!user) return <AuthCtx.Provider value={{ user, setUser, refresh, logout }}><Login /></AuthCtx.Provider>;
 

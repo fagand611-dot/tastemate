@@ -13,6 +13,7 @@ import savesRoutes from './routes/saves.js';
 import friendRoutes from './routes/friends.js';
 import profileRoutes from './routes/profile.js';
 import connectRoutes from './routes/connect.js';
+import inviteRoutes from './routes/invites.js';
 import { createSpotify } from './providers/spotify.js';
 import { createInstagram } from './providers/instagram.js';
 import { createConnections } from './connect.js';
@@ -55,6 +56,7 @@ export function createApp({
   friendRoutes(api, ctx);
   profileRoutes(api, ctx);
   connectRoutes(api, ctx);
+  inviteRoutes(api, ctx);
   savesRoutes(api, ctx);
   api.use((_req, res) => res.status(404).json({ error: 'Not found' }));
   app.use('/api', api);

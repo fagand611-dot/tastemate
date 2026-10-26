@@ -110,6 +110,25 @@ CREATE TABLE IF NOT EXISTS feed_runs (
   PRIMARY KEY (city_key, provider)
 );
 
+-- Digital invitations: a link guests open (no account needed) and answer.
+CREATE TABLE IF NOT EXISTS invites (
+  id INTEGER PRIMARY KEY,
+  token TEXT NOT NULL UNIQUE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  payload TEXT NOT NULL,         -- JSON: headline, line, when, where, dress, colours, motif, type, palette, records, menu
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS rsvps (
+  id INTEGER PRIMARY KEY,
+  invite_id INTEGER NOT NULL REFERENCES invites(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  answer TEXT NOT NULL CHECK (answer IN ('yes', 'maybe', 'no')),
+  note TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (invite_id, name)
+);
+
 -- Apps a person has connected (Spotify, Instagram). Tokens are sealed with
 -- AES-GCM (server/secrets.js) and never leave the server.
 CREATE TABLE IF NOT EXISTS connections (

@@ -1428,3 +1428,39 @@ h1 { letter-spacing: 0.04em; }
 .me-apps li { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .me-apps b { font-family: var(--serif); text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.85rem; }
 .collage-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+/* ---------- sending the invite ---------- */
+.send-invite { border-top: 1px solid var(--line); padding-top: 12px; display: grid; gap: 8px; }
+.send-invite .label { margin: 0; }
+.share-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.share-btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: 999px; border: 1.5px solid var(--outline); background: var(--surface); color: var(--ink); font-family: var(--serif); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.72rem; font-weight: 600; cursor: pointer; min-height: 0; box-shadow: none; }
+.share-btn:hover:not(:disabled) { background: var(--surface-2); transform: translateY(-1px); box-shadow: none; }
+.share-btn.wa { background: #1f7a4d; border-color: #1f7a4d; color: #fff; }
+.share-btn.ig { background: linear-gradient(135deg, #f2b8c3, #e3a92a); border-color: #2b1d22; color: #2b1d22; }
+.invite-link { margin: 0; color: var(--ink-2); overflow-wrap: anywhere; }
+.btn-link { background: none; border: 0; padding: 0; min-height: 0; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; box-shadow: none; }
+.btn-link:hover:not(:disabled) { transform: none; box-shadow: none; }
+.replies { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.replies li { padding: 8px 12px; border-radius: 12px; background: var(--surface-2); font-size: 0.9rem; }
+.replies li span { color: var(--muted); }
+.replies li.a-yes span { color: #1f7a4d; font-weight: 600; }
+.replies em { color: var(--ink-2); }
+.spread-cta { display: flex; justify-content: center; margin: -8px 0 26px; }
+
+/* ---------- the page a guest opens ---------- */
+.guest-page { min-height: 100vh; background: color-mix(in srgb, var(--g-bg, #2b1d22) 12%, #fffaf0); color: #2b1d22; display: grid; justify-items: center; align-content: start; gap: 22px; padding: 28px 16px 40px; }
+.guest-head { display: flex; align-items: center; gap: 10px; font-size: 1rem; }
+.guest-head p { margin: 0; }
+.guest-host { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; display: grid; place-items: center; background: #f2b8c3; border: 1.5px solid #2b1d22; }
+.guest-card { width: min(420px, 100%); }
+.guest-details, .guest-rsvp { width: min(420px, 100%); background: #fffaf0; border-radius: 18px; padding: 18px; box-shadow: 0 10px 30px -18px rgba(43, 29, 34, 0.5); display: grid; gap: 14px; }
+.guest-details .label, .guest-rsvp .label { margin: 0 0 6px; color: #6b1f2a; }
+.guest-menu, .guest-records { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-family: var(--chic); font-style: italic; }
+.guest-records li { display: flex; align-items: center; gap: 8px; }
+.guest-rsvp input { width: 100%; }
+.guest-answers { display: flex; flex-wrap: wrap; gap: 8px; }
+.guest-answers .btn-primary { background: var(--g-bg, #2b1d22); border-color: var(--g-bg, #2b1d22); color: var(--g-ink, #fffaf0); }
+.guest-done { margin: 0; font-family: var(--chic); font-style: italic; font-size: 1.25rem; }
+.guest-gone { margin-top: 30vh; font-family: var(--chic); font-style: italic; font-size: 1.3rem; }
+.guest-foot { font-size: 0.8rem; color: #8f8086; }
+.invite-panel .invite { width: min(340px, 100%); align-self: center; }
