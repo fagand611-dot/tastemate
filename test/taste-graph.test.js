@@ -300,3 +300,17 @@ test('tasteWeb: six sides of a life, scaled to your biggest, with what leads eac
   assert.ok(web.find((a) => a.key === 'style').value < 1);
   assert.equal(tasteWeb(new Map()), null);
 });
+
+test('tasteWeb: every saved song counts towards music, genre or not, and your artists lead it', () => {
+  const saves = interpret([
+    ...[1, 2, 3, 4, 5, 6].map((i) => save(i, 'song', 'spotify', [], { title: `Song ${i}`, creator: i < 5 ? 'Bruno Major' : 'Bazzi, Camila Cabello' })),
+    save(7, 'place', 'google_maps', ['pastry', 'coffee']),
+    save(8, 'look', 'instagram', ['tailoring']),
+  ]);
+  const web = tasteWeb(tasteProfile(saves), saves);
+  const music = web.find((a) => a.key === 'music');
+  assert.equal(music.value, 1, 'six untagged songs still make music the biggest side');
+  assert.deepEqual(music.top, ['Bruno Major', 'Bazzi'], 'most-saved artists when there are no genres');
+  assert.ok(web.find((a) => a.key === 'food').value > 0.2, 'square-rooted, so smaller sides still show');
+  assert.ok(web.find((a) => a.key === 'style').value > 0);
+});

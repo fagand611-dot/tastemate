@@ -75,6 +75,10 @@ export function createEnricher(db, lookup, { delayMs = 1100 } = {}) {
       if (queue.length && !running) running = run();
       return queue.length;
     },
+    /** Queue every saved artist we've never looked up (the queue lives in memory, so this runs at start-up). */
+    queueUnknown() {
+      return this.queue(db.prepare("SELECT DISTINCT creator FROM saves WHERE kind = 'song' AND creator IS NOT NULL").all().map((r) => r.creator));
+    },
     /** Artists still waiting or being looked up. */
     pending: () => queue.length + (current ? 1 : 0),
     /** Resolves when the queue is empty (for tests). */

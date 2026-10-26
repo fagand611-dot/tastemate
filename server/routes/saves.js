@@ -138,7 +138,7 @@ export default function savesRoutes(r, { db, venueFeed, enricher, feeds }) {
     res.json({
       character,
       board: tasteBoard(saves, clusters, profile),
-      web: tasteWeb(profile),
+      web: tasteWeb(profile, saves),
       collage: tasteCollage(saves, profile, { city, nightOwl: owl }),
       day,
       city,

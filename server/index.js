@@ -16,6 +16,10 @@ const port = Number(process.env.PORT) || 3001;
 const app = createApp({ db });
 // Connected apps re-sync about once a day.
 app.locals.connections.startAutoSync();
+// Artists still waiting for their sounds (from before a restart) go back in the queue.
+app.locals.enricher.queueUnknown();
+const waiting = app.locals.enricher.pending();
+if (waiting) console.log(`Looking up ${waiting} artists on MusicBrainz in the background`);
 for (const [name, c] of Object.entries({ Spotify: process.env.SPOTIFY_CLIENT_ID, Instagram: process.env.INSTAGRAM_APP_ID })) {
   if (!c) console.log(`${name} connect is off (no keys in .env); file imports still work.`);
 }

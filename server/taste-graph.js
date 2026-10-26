@@ -5,7 +5,7 @@
 //
 // Pure functions: routes load rows, this scores them.
 // See DESIGN.md §4.
-import { ASSOCIATIONS, facetOf, readSignals } from './taxonomy.js';
+import { ASSOCIATIONS, facetOf, readSignals, splitCreators } from './taxonomy.js';
 
 export const SPOT_BLEND = { content: 0.6, social: 0.2, fresh: 0.1, gem: 0.1 };
 // How much each kind of signal counts.
@@ -483,19 +483,36 @@ const WEB = [
   { key: 'travel', label: 'Travel', test: (t) => facetOf(t) === 'place' || ['travel', 'hotel'].includes(t) },
 ];
 
+// What a save is counts too, not only what it's tagged: a song is music
+// even before its genre is known. Weight per save, by kind, onto an axis.
+const WEB_KINDS = { song: ['music', 1], food: ['food', 1], look: ['style', 1], art: ['culture', 1], event: ['nights', 0.5] };
+
 /**
  * Your taste web: how much of your taste goes to each side of life, 0–1
- * relative to your biggest,
- * with the two tags that lead each side.
+ * relative to your biggest (square-rooted), from your tastes and from what you save (every
+ * song counts towards music), with what leads each side: its top tastes,
+ * or for music your most-saved artists when genres are thin.
  */
-export function tasteWeb(profile) {
+export function tasteWeb(profile, saves = []) {
+  const byKind = countBy(saves, (s) => s.kind);
+  const artists = new Map();
+  for (const s of saves) {
+    if (s.kind !== 'song' || !s.creator) continue;
+    const first = splitCreators(s.creator)[0];
+    if (first) artists.set(first, (artists.get(first) || 0) + 1);
+  }
+  const topArtists = [...artists.entries()].sort((x, y) => y[1] - x[1]).map(([n]) => n);
   const axes = WEB.map(({ key, label, test }) => {
     const tags = [...profile.entries()].filter(([t, v]) => v > 0 && !t.startsWith('creator:') && test(t)).sort((a, b) => b[1] - a[1]);
-    return { key, label, raw: tags.reduce((a, [, v]) => a + v, 0), top: tags.slice(0, 2).map(([t]) => t) };
+    const fromKinds = Object.entries(WEB_KINDS).filter(([, [axis]]) => axis === key).reduce((n, [kind, [, w]]) => n + (byKind[kind] || 0) * w, 0);
+    let top = tags.slice(0, 2).map(([t]) => t);
+    if (key === 'music' && top.length < 2) top = [...top, ...topArtists.filter((n) => !top.includes(n))].slice(0, 2);
+    return { key, label, raw: tags.reduce((a, [, v]) => a + v, 0) + fromKinds, top };
   });
   const max = Math.max(...axes.map((a) => a.raw));
   if (!(max > 0)) return null;
-  return axes.map(({ raw, ...a }) => ({ ...a, value: +(raw / max).toFixed(2) }));
+  // Square-rooted, so a huge music library leads without flattening every other side.
+  return axes.map(({ raw, ...a }) => ({ ...a, value: +Math.sqrt(raw / max).toFixed(2) }));
 }
 
 /** Metres between two points on Earth. */
