@@ -200,3 +200,38 @@ test('live feeds: things to buy from eBay, for every city, with the sample produ
   assert.ok(l.products.some((x) => x.spot.source === 'ebay'));
   s.close();
 });
+
+test('live feeds: OpenStreetMap places with no key, any city, linked to their own websites', async () => {
+  const { createOsm } = await import('../server/providers/osm.js');
+  const asked = [];
+  const osmFetch = async (url, opts = {}) => {
+    const u = new URL(url);
+    asked.push(u.host);
+    assert.match(opts.headers['User-Agent'], /^Tastemate\//, 'OpenStreetMap asks apps to say who they are');
+    if (u.host === 'nominatim.openstreetmap.org') return json([{ lat: '41.3874', lon: '2.1686' }]);
+    const query = new URLSearchParams(opts.body).get('data');
+    assert.match(query, /around:4000,41\.3874,2\.1686/);
+    return json({ elements: [
+      { type: 'node', id: 1, lat: 41.38, lon: 2.17, tags: { amenity: 'cafe', name: 'Satan’s Coffee Corner', website: 'https://satanscoffee.example', opening_hours: 'Mo-Su 08:00-18:00' } },
+      { type: 'node', id: 2, lat: 41.39, lon: 2.16, tags: { amenity: 'restaurant', cuisine: 'japanese;ramen', name: 'Ramen-ya Hiro' } },
+      { type: 'way', id: 3, center: { lat: 41.385, lon: 2.18 }, tags: { tourism: 'museum', name: 'Museu Picasso', wikidata: 'Q1', website: 'https://museupicasso.example' } },
+      { type: 'node', id: 4, lat: 41.38, lon: 2.17, tags: { shop: 'music', name: 'Discos Revolver', 'addr:street': 'Carrer dels Tallers' } },
+      { type: 'node', id: 5, lat: 41.38, lon: 2.17, tags: { amenity: 'restaurant', name: 'No cuisine listed' } },
+      { type: 'node', id: 6, lat: 41.38, lon: 2.17, tags: { amenity: 'cafe' } },
+    ] });
+  };
+  const rows = await createOsm({ fetchImpl: osmFetch }).fetchCity('Barcelona');
+  assert.deepEqual(asked, ['nominatim.openstreetmap.org', 'overpass-api.de']);
+  const by = Object.fromEntries(rows.map((r) => [r.title, r]));
+  assert.deepEqual(Object.keys(by).sort(), ['Discos Revolver', 'Museu Picasso', 'Ramen-ya Hiro', 'Satan’s Coffee Corner'], 'named places only; restaurants need a cuisine');
+  assert.ok(by['Satan’s Coffee Corner'].tags.includes('coffee'));
+  assert.equal(by['Satan’s Coffee Corner'].url, 'https://satanscoffee.example');
+  assert.ok(by['Ramen-ya Hiro'].tags.includes('noodles') && by['Ramen-ya Hiro'].tags.includes('japanese'));
+  assert.equal(by['Ramen-ya Hiro'].url, 'https://www.openstreetmap.org/node/2', 'no website: the map page');
+  assert.equal(by['Museu Picasso'].lat, 41.385, 'ways use their centre');
+  assert.equal(by['Museu Picasso'].popularity, 0.8, 'a landmark, not a find');
+  assert.ok(by['Discos Revolver'].tags.includes('vinyl'));
+  assert.equal(by['Discos Revolver'].venue, 'Carrer dels Tallers');
+  assert.equal(by['Discos Revolver'].credit, 'Map data © OpenStreetMap contributors');
+  assert.equal(createOsm({ enabled: false }), null);
+});

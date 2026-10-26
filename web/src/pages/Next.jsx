@@ -311,13 +311,17 @@ function useSpotActions(spot, onAct) {
       setBusy(false);
     }
   };
-  return { busy, why, setWhy, go };
+  return { busy, why, setWhy, go, spot };
 }
 
-function Actions({ busy, go, setWhy }) {
+// Where a live pick leads: tickets for events, the place's own site or map, the shop.
+const OPEN_LABEL = { event: 'Tickets', place: 'Website', product: 'Buy' };
+
+function Actions({ busy, go, setWhy, spot }) {
   return (
     <div className="actions">
       <button disabled={busy} className="btn btn-sm btn-primary" onClick={() => go('save')}><Icon name="plus" size={16} /> Save</button>
+      {spot?.url && <a className="btn btn-sm btn-outline open-btn" href={spot.url} target="_blank" rel="noreferrer">{/openstreetmap\.org|maps\.google/.test(spot.url) ? 'Map' : OPEN_LABEL[spot.kind]} <Icon name="arrow" size={14} /></a>}
       <button className="btn btn-sm btn-ghost why-btn" onClick={() => setWhy(true)}><Icon name="graph" size={16} /> Why?</button>
       <button disabled={busy} className="icon-btn" aria-label="Not for me" title="Not for me" onClick={() => go('dismiss')}><Icon name="x" size={18} /></button>
     </div>
@@ -388,19 +392,33 @@ function Postcard({ spot, match, reasons }) {
 
 const KIND_WORD = { event: 'what’s on', place: 'places', product: 'things to buy' };
 
-/** Where the picks come from: live feeds, and when, or a note that these are samples. */
+const SWITCH_ON = { event: 'a free Ticketmaster key (TICKETMASTER_API_KEY)', place: 'a Google Places key (GOOGLE_PLACES_API_KEY)', product: 'eBay keys (EBAY_CLIENT_ID and EBAY_CLIENT_SECRET)' };
+
+/** Where the picks come from: live feeds (and when), and which kinds are still samples. */
 function LiveLine({ live = [], city }) {
   if (!city) return null;
   const on = live.filter((f) => f.ok && f.count > 0);
-  if (!on.length) {
-    return <p className="live-line sample"><span className="live-dot" /> Sample picks for {city}{live.length ? ' while live listings load' : ''}. Live events and places appear here once they’re switched on.</p>;
-  }
-  const mins = Math.round((Date.now() - Math.min(...on.map((f) => f.fetched_at))) / 60000);
-  const age = mins < 60 ? `${Math.max(1, mins)} min ago` : mins < 1440 ? `${Math.round(mins / 60)} h ago` : `${Math.round(mins / 1440)} days ago`;
+  const liveKinds = new Set(on.flatMap((f) => f.kinds));
+  const samples = ['event', 'place', 'product'].filter((k) => !liveKinds.has(k));
+  const age = (() => {
+    if (!on.length) return '';
+    const mins = Math.round((Date.now() - Math.min(...on.map((f) => f.fetched_at))) / 60000);
+    return mins < 60 ? `${Math.max(1, mins)} min ago` : mins < 1440 ? `${Math.round(mins / 60)} h ago` : `${Math.round(mins / 1440)} days ago`;
+  })();
   return (
-    <p className="live-line">
-      <span className="live-dot on" /> Live in {city}: {on.map((f) => `${f.kinds.map((k) => KIND_WORD[k] || k).join(' & ')} from ${f.label}`).join(', ')} · updated {age}
-    </p>
+    <div className="live-line-wrap">
+      {on.length > 0 && (
+        <p className="live-line">
+          <span className="live-dot on" /> Live in {city}: {on.map((f) => `${f.kinds.map((k) => KIND_WORD[k] || k).join(' & ')} from ${f.label}`).join(', ')} · updated {age}
+        </p>
+      )}
+      {samples.length > 0 && (
+        <p className="live-line sample">
+          <span className="live-dot" /> {samples.map((k) => KIND_WORD[k]).join(', ').replace(/^./, (c) => c.toUpperCase())} {samples.length > 1 ? 'are' : 'is'} sample picks for now.
+          {import.meta.env.DEV ? ` To make ${samples.length > 1 ? 'them' : 'it'} real, add ${samples.map((k) => SWITCH_ON[k]).join(', ')} to .env.` : ''}
+        </p>
+      )}
+    </div>
   );
 }
 

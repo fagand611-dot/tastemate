@@ -29,7 +29,7 @@ test('openDb upgrades a database made by an earlier version', () => {
   const db = openDb(file);
   assert.equal(db.prepare('SELECT home_city FROM users WHERE id = 1').get().home_city, 'Dublin');
   assert.ok(db.prepare('PRAGMA table_info(spots)').all().some((c) => c.name === 'added_by'));
-  assert.doesNotThrow(() => createApp({ db, venueFeed: null, artistLookup: null }), 'the server starts on it');
+  assert.doesNotThrow(() => createApp({ db, venueFeed: null, artistLookup: null, feedProviders: [] }), 'the server starts on it');
   // Running it again is a no-op.
   db.close();
   assert.doesNotThrow(() => openDb(file).close());

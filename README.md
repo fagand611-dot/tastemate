@@ -79,14 +79,19 @@ posts still works.
 
 ### Live events and places in Next
 
-Out of the box Next uses sample spots, marked *demo*. With keys it fetches
-the real thing for whichever city someone looks at, their home city included
-(any city, not just the samples'):
+Out of the box, places in Next are real, from **OpenStreetMap** (no key
+needed): cafés, bakeries, bars, pubs, restaurants by cuisine, record and book
+shops, vintage and wine shops, galleries, museums, cinemas, theatres and
+clubs around the city centre, each linked to its website or map page
+(`OSM=off` turns it off; set `OSM_CONTACT` to an email or URL, as its usage
+policy asks). Events and things to buy are samples, marked *demo*, until
+you add keys. With keys it fetches the real thing for whichever city someone
+looks at, their home city included (any city, not just the samples'):
 
 - **Events** from Ticketmaster (gigs, comedy, theatre, film), refreshed every
   few hours, 45 days ahead, with dates, venue, prices, a photo and the link
   to buy. Strongest in North America, Europe, Australia and New Zealand.
-- **Places** from Google Places: thirteen searches per city (specialty coffee,
+- **Places** from Google Places (replacing OpenStreetMap, with ratings and photos): thirteen searches per city (specialty coffee,
   bakeries, natural wine and cocktail bars, jazz bars, record and book shops,
   galleries, vintage and design stores, noodles, street food, brunch), kept if
   they're open and rated 4.2 or more by at least 20 people, refreshed weekly.

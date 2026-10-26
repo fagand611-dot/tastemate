@@ -20,7 +20,7 @@ let base;
 before(async () => {
   const db = openDb(':memory:');
   seedSpots(db);
-  app = createApp({ db, venueFeed: null, artistLookup: fakeLookup });
+  app = createApp({ db, venueFeed: null, artistLookup: fakeLookup, feedProviders: [] });
   server = app.listen(0);
   await new Promise((r) => server.once('listening', r));
   base = `http://localhost:${server.address().port}/api`;

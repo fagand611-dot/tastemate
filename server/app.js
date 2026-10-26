@@ -21,6 +21,7 @@ import { createFeeds } from './feeds.js';
 import { createTicketmaster } from './providers/ticketmaster.js';
 import { createGooglePlaces } from './providers/google-places.js';
 import { createEbay } from './providers/ebay.js';
+import { createOsm } from './providers/osm.js';
 import { createSealer, loadTokenKey } from './secrets.js';
 
 export function createApp({
@@ -29,8 +30,9 @@ export function createApp({
   artistLookup = createArtistLookup(),
   // Apps people can connect; null where this server has no keys for one.
   connectors = { spotify: createSpotify(), instagram: createInstagram() },
-  // Live events, places and things to buy for Next; none without keys, and Next uses the samples.
-  feedProviders = [createTicketmaster(), createGooglePlaces(), createEbay()],
+  // Live events, places and things to buy for Next. Without keys: places from OpenStreetMap, samples for the rest.
+  // OpenStreetMap needs no key, so places are real from the start; Google takes over when it has one.
+  feedProviders = [createTicketmaster(), createGooglePlaces() || createOsm(), createEbay()],
   // Only needed (and only made) once there's an app to connect.
   tokenKey = Object.values(connectors).some(Boolean) ? loadTokenKey() : null,
   publicUrl = process.env.PUBLIC_URL,

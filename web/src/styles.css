@@ -1759,3 +1759,56 @@ a { color: var(--ink); }
 
 /* Taste board words and live dot pick up the orange gradient. */
 .live-dot.on { background: var(--orb); }
+
+/* ==========================================================================
+   Lighter and easier to read: fewer black blocks (main buttons and chosen
+   options are warm orange pills with dark text), and grey text dark enough
+   to read on sand and glass.
+   ========================================================================== */
+:root {
+  --ink-2: #4a443f;
+  --muted: #6b635b;
+  --pill: linear-gradient(135deg, #ffd0a6 0%, #ffab6b 45%, #ff8a3d 100%);
+  --pill-hover: linear-gradient(135deg, #ffc28e 0%, #ff9b55 45%, #ff7a26 100%);
+  --pill-ink: #2a1a0e;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { --ink-2: #d6cfc7; --muted: #b0a79e; } }
+:root[data-theme='dark'] { --ink-2: #d6cfc7; --muted: #b0a79e; }
+
+.page-head .intro, .you-head p, .shelf-sub, .muted, .tile-text small, .eyebrow, .label, .tc-eyebrow, .tc-apps, .ticket-kicker, .theme-pick small, .web-sub { color: var(--muted) !important; }
+
+/* Main actions: orange glass pills, dark text (light and dark mode alike). */
+.btn-primary, .quick-btn.primary, .fab, .spread-cta .btn, .share-btn.wa,
+.seg button.on, .seg [aria-checked='true'], .topnav a.active, .chip.on {
+  background: var(--pill) !important;
+  color: var(--pill-ink) !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
+  box-shadow: 0 10px 22px -14px rgba(230, 100, 20, 0.7) !important;
+}
+.btn-primary:hover:not(:disabled), .quick-btn.primary:hover, .fab:hover, .spread-cta .btn:hover { background: var(--pill-hover) !important; }
+.btn-primary:disabled { opacity: 0.55; }
+.quick-btn.primary svg, .btn-primary svg { color: var(--pill-ink); }
+.seg button.on, .seg [aria-checked='true'], .topnav a.active { box-shadow: 0 6px 14px -10px rgba(230, 100, 20, 0.7) !important; }
+.share-btn.wa { background: linear-gradient(135deg, #c9efd6, #8fdcaa) !important; color: #123d24 !important; }
+
+/* The one dark tile becomes a glowing orange one. */
+.tiles .tile:nth-child(2) {
+  background:
+    radial-gradient(80% 130% at 90% 10%, rgba(255, 122, 26, 0.55), transparent 65%),
+    radial-gradient(70% 100% at 0% 100%, rgba(255, 200, 150, 0.6), transparent 70%),
+    linear-gradient(160deg, var(--glass-hi), var(--glass-lo)) !important;
+  border-color: var(--glass-edge) !important;
+}
+.tiles .tile:nth-child(2) .tile-text b, .tiles .tile:nth-child(2) .tile-go { color: var(--ink) !important; }
+.tiles .tile:nth-child(2) .tile-text small { color: var(--muted) !important; }
+
+/* Envelope stamp and wax in orange, not black. */
+.env-stamp { background: var(--pill) !important; color: var(--pill-ink) !important; outline-color: rgba(255, 255, 255, 0.8) !important; }
+.live-line-wrap { margin: 4px 0 14px; display: grid; gap: 4px; }
+.live-line-wrap .live-line { margin: 0; }
+.open-btn { text-decoration: none; }
+/* Polaroids: soft paper, not ink frames. */
+.snap { border: 1px solid rgba(29, 27, 25, 0.1) !important; box-shadow: var(--soft-shadow) !important; background: #fffdf9 !important; }
+.snap-photo, .pair-photo, .venue-photo { border: 0 !important; border-radius: 10px; }
+.photo-label { border: 1.5px solid rgba(255, 255, 255, 0.9) !important; box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.3) !important; }
+.snap .match, .ticket .match { border: 1px solid rgba(29, 27, 25, 0.12) !important; box-shadow: none !important; }

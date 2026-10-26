@@ -69,6 +69,7 @@ before(async () => {
     db,
     venueFeed: null,
     artistLookup: async () => null,
+    feedProviders: [],
     connectors: {
       spotify: createSpotify({ clientId: 'cid', clientSecret: 'secret', fetchImpl: fakeFetch, wait: async () => {} }),
       instagram: createInstagram({ appId: 'igid', appSecret: 'igsecret', fetchImpl: fakeFetch }),
@@ -193,7 +194,7 @@ test('Instagram: connect with a long-lived token, bring your own posts in, citie
 });
 
 test('connect: apps this server has no keys for, and ones it has never heard of', async () => {
-  const off = createApp({ db, venueFeed: null, artistLookup: async () => null, connectors: { spotify: null }, tokenKey: key });
+  const off = createApp({ db, venueFeed: null, artistLookup: async () => null, connectors: { spotify: null }, tokenKey: key, feedProviders: [] });
   const s = off.listen(0);
   await new Promise((r) => s.once('listening', r));
   const url = `http://localhost:${s.address().port}`;
