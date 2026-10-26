@@ -5,7 +5,8 @@ import SpotPhoto from '../components/SpotPhoto.jsx';
 import Icon, { SAVE_ICON, SPOT_ICON } from '../components/Icon.jsx';
 import { useActions } from '../components/actions.jsx';
 import { Empty, Loading, PageHead, useApi } from '../components/ui.jsx';
-import { Dialog, WhyFlow } from '../components/viz.jsx';
+import { Dialog } from '../components/viz.jsx';
+import { useAuth } from '../App.jsx';
 import TasteArt, { hasArt } from '../components/TasteArt.jsx';
 import { hash, wesFor } from '../components/Retro.jsx';
 
@@ -324,11 +325,63 @@ function Actions({ busy, go, setWhy }) {
 
 function WhyDialog({ spot, match, reasons, onClose }) {
   return (
-    <Dialog title={`Why ${spot.title}?`} onClose={onClose}>
-      <p className="muted small">How your saves led here. The wider the stream, the more of your saves.</p>
-      <WhyFlow spot={spot} match={match} reasons={reasons} />
-      <SpotReasons reasons={reasons} />
+    <Dialog title="A note from your Tastemate" onClose={onClose}>
+      <Postcard spot={spot} match={match} reasons={reasons} />
     </Dialog>
+  );
+}
+
+const andList = (l) => (l.length > 1 ? `${l.slice(0, -1).join(', ')} and ${l[l.length - 1]}` : l[0] || '');
+
+/**
+ * Why we picked it, as a postcard rather than a chart: the place on the
+ * front, and on the back a handwritten note in plain words, naming the
+ * things you saved that led here, with your match as the stamp.
+ */
+function Postcard({ spot, match, reasons }) {
+  const { user } = useAuth();
+  const get = (t) => reasons.find((r) => r.type === t);
+  const ev = get('saves')?.evidence || [];
+  const tags = ev.length ? ev.map((e) => e.tag) : get('tags')?.tags || [];
+  const examples = [...new Set(ev.flatMap((e) => e.examples))].slice(0, 2);
+  const apps = [...new Set(ev.flatMap((e) => e.sources.map((x) => x.label)))].slice(0, 2);
+  const lines = [];
+  const st = get('stretch');
+  if (st) lines.push(`This one’s a little stretch: ${andList(st.tags) || 'something new'}${st.why ? `, ${st.why}` : ''}. Go on.`);
+  if (tags.length) lines.push(`It’s ${andList(tags.slice(0, 3))}, which is very you.`);
+  if (examples.length) lines.push(`Think “${examples.join('” and “')}”${apps.length ? `, from your ${andList(apps)}` : ''}.`);
+  const cr = get('creator');
+  if (cr?.name) lines.push(`And it’s ${cr.name}, who you already love.`);
+  const fr = get('friends');
+  if (fr) lines.push(`${andList(fr.names)} saved it too.`);
+  if (get('new')) lines.push('It only just opened.');
+  if (get('gem')) lines.push('Hardly anyone knows about it yet.');
+  if (!lines.length) lines.push('It just felt like you.');
+  const where = spot.city || 'Anywhere';
+  const today = new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' }).toUpperCase();
+  return (
+    <div className="postcard">
+      <div className="postcard-front">
+        <SpotPhoto spot={spot} size={90} className="postcard-photo" />
+        <p className="postcard-greeting"><span>Greetings from</span><b>{spot.venue || where}</b></p>
+      </div>
+      <div className="postcard-back">
+        <div className="postcard-note">
+          <p>Dear {user.display_name.split(' ')[0]},</p>
+          {lines.map((l) => <p key={l}>{l}</p>)}
+          <p className="postcard-sign">x, your Tastemate</p>
+        </div>
+        <div className="postcard-side">
+          <span className="stamp"><b>{match}%</b><small>you</small></span>
+          <span className="postmark" aria-hidden><span>{where.toUpperCase()}</span><span>{today}</span></span>
+          <span className="postcard-to">
+            <span>{user.display_name}</span>
+            <span>{spot.title}</span>
+            <span>{where}</span>
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }
 

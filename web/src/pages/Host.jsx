@@ -6,11 +6,15 @@ import { useActions } from '../components/actions.jsx';
 import Mascot from '../components/Mascot.jsx';
 import SpotPhoto from '../components/SpotPhoto.jsx';
 import TasteArt, { hasArt } from '../components/TasteArt.jsx';
-import { PinBoard, Vinyl, WES, wesFor } from '../components/Retro.jsx';
+import { PinBoard, Vinyl, WES } from '../components/Retro.jsx';
 import { Empty, Loading, PageHead, useApi } from '../components/ui.jsx';
+import { Dialog } from '../components/viz.jsx';
+import { MascotFace } from '../components/Mascot.jsx';
+import { useAuth } from '../App.jsx';
 
 // Host: "I'm having people over" → one theme from your taste clusters, and
-// everything to match it: drinks, food, music, an invitation and a moodboard.
+// everything to match it, sealed in an envelope: open it and the invitation,
+// a ticket, the menu, a record and the rest spill out; tap one for the detail.
 export default function Host() {
   const [type, setType] = useState('dinner');
   const [theme, setTheme] = useState(null);
@@ -58,120 +62,187 @@ export default function Host() {
 }
 
 function Plan({ d }) {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [detail, setDetail] = useState(null);
+  const [when, setWhen] = useState('Saturday, 8pm');
+  const [where, setWhere] = useState(d.venue ? d.venue.spot.title : 'at mine');
+  const records = [...d.playlist.fromSaves.map((x) => ({ ...x, mine: true })), ...d.playlist.more];
+  const ink = d.invite.colors;
+
+  // Everything in the envelope, and what each one opens.
+  const items = [
+    { key: 'invite', label: 'The invitation', node: (
+      <div className={`obj-invite invite type-${d.invite.type}`} style={{ '--bg': ink.bg, '--ink': ink.ink, '--accent': ink.accent }}>
+        <small>{d.invite.line}</small><b>{d.invite.headline}</b><span>{when}</span>
+      </div>
+    ) },
+    { key: 'ticket', label: 'Your ticket', node: (
+      <div className="obj-ticket"><small>Admit one</small><b>{d.theme.name}</b><span>{when} · {where}</span></div>
+    ) },
+    { key: 'menu', label: 'The menu', node: (
+      <div className="obj-menu">
+        <small>Menu</small>
+        {[...d.food.snacks, ...d.food.main, ...d.food.sweet].slice(0, 4).map((x) => <span key={x.name}>{x.name}</span>)}
+        <i>{d.drinks.wine[0]?.name.split(' (')[0]}</i>
+      </div>
+    ) },
+    { key: 'records', label: `${records.length} records`, node: (
+      <div className="obj-record" style={{ '--sleeve': d.theme.palette[1] || '#c8372d' }}>
+        <Vinyl title={records[0]?.title || ''} size={96} spinning={open} />
+        <span className="sleeve"><b>{records[0]?.title}</b><small>{records[0]?.creator}</small></span>
+      </div>
+    ) },
+    d.venue && { key: 'venue', label: 'Throw it at', node: (
+      <div className="obj-matchbook"><span className="sticks" aria-hidden /><b>{d.venue.spot.title}</b><small>{d.venue.spot.venue}</small></div>
+    ) },
+    { key: 'dress', label: 'What to wear', node: (
+      <div className="obj-swatch"><small>Dress code</small><b>{d.invite.dress || 'Come as you are'}</b><span className="chips-row">{d.theme.palette.map((c) => <i key={c} style={{ background: c }} />)}</span></div>
+    ) },
+    d.guests.length > 0 && { key: 'guests', label: `${d.guests.length} guests`, node: (
+      <div className="obj-tag"><span className="hole" aria-hidden /><small>Guest list</small>{d.guests.slice(0, 4).map((g) => <span key={g.name}>{g.name}</span>)}</div>
+    ) },
+    { key: 'run', label: 'Hour by hour', node: (
+      <div className="obj-card"><small>The running order</small>{d.run.slice(0, 4).map((r) => <span key={r.time}><b>{r.time}</b> {r.step}</span>)}</div>
+    ) },
+    { key: 'scene', label: 'Set the scene', node: (
+      <div className="obj-scene"><TasteArt name={d.theme.tags.find(hasArt) || 'moody'} size={64} fill="#6b1f2a" /><b>{d.scene[0]?.name}</b></div>
+    ) },
+    d.games.length > 0 && { key: 'games', label: 'Break the ice', node: (
+      <div className="obj-play"><span>♥</span><b>{d.games[0].name}</b><span className="flip">♥</span></div>
+    ) },
+    { key: 'todo', label: 'The countdown', node: (
+      <div className="obj-notepad"><small>To do</small>{d.prep.slice(0, 3).map((p) => <span key={p.when}>☐ {p.tasks[0]}</span>)}</div>
+    ) },
+    d.moodboard.length > 0 && { key: 'vibe', label: 'The vibe', node: (
+      <div className="obj-polaroids">{d.moodboard.slice(0, 2).map((m, i) => <span key={m.id} style={{ '--t': `${i ? 6 : -5}deg`, background: d.theme.palette[i] }}><TasteArt name={m.tags.find(hasArt) || 'explorer'} size={40} fill="#fff" /></span>)}</div>
+    ) },
+    d.shop.length > 0 && { key: 'shop', label: 'On the way', node: (
+      <div className="obj-receipt"><small>{d.city || 'Shop'}</small>{d.shop.slice(0, 3).map((x) => <span key={x.id}>{x.title.split(',')[0]}<i>{x.price || ''}</i></span>)}</div>
+    ) },
+  ].filter(Boolean);
+
+  const views = {
+    invite: ['Send the invite', <Invite invite={d.invite} when={when} where={where} setWhen={setWhen} setWhere={setWhere} />],
+    ticket: ['Your ticket', <Ticket d={d} when={when} where={where} />],
+    menu: ['The menu', (
+      <div className="host-grid two">
+        <section className="panel"><h2><Icon name="sparkle" /> Serve this</h2><IdeaList title="As people arrive" items={d.food.snacks} /><IdeaList title="Main" items={d.food.main} /><IdeaList title="Sweet" items={d.food.sweet} /></section>
+        <section className="panel"><h2><Icon name="cup" /> Pour this</h2><IdeaList title="Wine" items={d.drinks.wine} /><IdeaList title="Cocktails" items={d.drinks.cocktails} /><IdeaList title="Without alcohol" items={d.drinks.zero} /></section>
+      </div>
+    )],
+    records: ['Press play', (
+      <ul className="records">
+        {records.map((x) => (
+          <li key={x.title} className="record">
+            <Vinyl title={x.title} size={48} />
+            <span><b>{x.url ? <a href={x.url} target="_blank" rel="noreferrer">{x.title}</a> : x.title}</b><small className="muted">{x.creator}{x.mine ? ' · from your saves' : ''}</small></span>
+          </li>
+        ))}
+      </ul>
+    )],
+    venue: d.venue && ['Throw it at', (
+      <article className="venue-card">
+        <SpotPhoto spot={d.venue.spot} size={70} className="venue-photo" />
+        <div>
+          <h3>{d.venue.spot.title}</h3>
+          <p className="sub">{[d.venue.spot.venue, d.venue.spot.city].filter(Boolean).join(' · ')}{d.venue.spot.is_demo && <span className="badge demo">demo</span>}</p>
+          {d.venue.because.length > 0 && <p className="because">for your love of {d.venue.because.join(', ')}</p>}
+          <button className="btn btn-sm btn-outline" onClick={() => setWhere(d.venue.spot.title)}>Put it on the invite</button>
+        </div>
+      </article>
+    )],
+    dress: ['What to wear', (
+      <article className="style-card">
+        <h3>{d.invite.dress || 'Come as you are'}</h3>
+        <div className="swatches big" aria-label="Wear these colours">{d.theme.palette.map((c) => <span key={c} style={{ background: c }} title={c} />)}</div>
+        <p className="muted small">Wear these colours, light candles, and put {records[0]?.title || 'a record'} on first.</p>
+      </article>
+    )],
+    guests: ['Who’s coming', <Guests guests={d.guests} />],
+    run: ['The night, hour by hour', <><Numbers numbers={d.numbers} /><RunOfShow run={d.run} /></>],
+    scene: ['Set the scene', <Scene scene={d.scene} />],
+    games: ['Break the ice', <Games games={d.games} />],
+    todo: ['The countdown', <Countdown prep={d.prep} />],
+    vibe: ['The vibe', (
+      <PinBoard className="collage">
+        {d.moodboard.map((m, i) => (
+          <figure key={m.id} className="collage-snap" style={{ '--tilt': `${((i * 37) % 9) - 4}deg` }}>
+            <span className="pin" aria-hidden />
+            <span className="collage-photo" style={{ background: d.theme.palette[i % d.theme.palette.length] }}>
+              {m.kind === 'song' ? <Vinyl title={m.title} size={64} /> : <TasteArt name={m.tags.find(hasArt) || 'explorer'} size={60} fill="#fff" />}
+            </span>
+            <figcaption><b>{m.url ? <a href={m.url} target="_blank" rel="noreferrer">{m.title}</a> : m.title}</b><span>{m.tags.slice(0, 2).join(' · ')}</span></figcaption>
+          </figure>
+        ))}
+      </PinBoard>
+    )],
+    shop: ['Grab on the way', (
+      <ul className="plan">
+        {d.shop.map((x) => (
+          <li key={x.id}>
+            <Icon name={SPOT_ICON[x.kind]} size={16} />
+            <span><b>{x.title}</b> <span className="muted">{[x.venue, x.price].filter(Boolean).join(' · ')}</span></span>
+            {x.is_demo && <span className="badge demo">demo</span>}
+          </li>
+        ))}
+      </ul>
+    )],
+  };
+  const view = detail && views[detail];
+
   return (
     <>
-      <section className="theme-banner">
-        <Mascot size={120} color="butter" prop={d.theme.tags.find(hasArt) || 'wine bar'} />
-        <div className="theme-text">
-          <p className="eyebrow">{d.occasion.label} · from {d.theme.from} of your saves</p>
-          <h2>{d.theme.name}</h2>
-          <div className="tags">{d.theme.tags.map((t) => <span key={t} className="tag">{t}</span>)}</div>
-        </div>
-        <div className="swatches" aria-label="The evening’s colours">
-          {d.theme.palette.map((c) => <span key={c} style={{ background: c }} title={c} />)}
-        </div>
+      <section className={`envelope-stage ${open ? 'open' : ''}`} style={{ '--env': d.theme.palette[d.theme.palette.length - 1] || '#f6ead2', '--flap': d.theme.palette[1] || '#c8372d' }}>
+        <button className="envelope" onClick={() => setOpen(true)} aria-expanded={open} aria-label={open ? 'Envelope, open' : 'Open the envelope'}>
+          <span className="env-back" />
+          <span className="env-card" style={{ background: ink.bg, color: ink.ink }}>
+            <small style={{ color: ink.accent }}>{d.occasion.label}</small>
+            <b>{d.theme.name}</b>
+          </span>
+          <span className="env-pocket" />
+          <span className="env-flap" />
+          <span className="env-seal"><MascotFace /></span>
+          <span className="env-address">
+            <span>For {user.display_name.split(' ')[0]} &amp; {Math.max(1, d.guests.length)} more</span>
+            <span>{where}{d.city ? `, ${d.city}` : ''}</span>
+          </span>
+          <span className="env-stamp">{d.theme.from}<small>saves</small></span>
+        </button>
+        {!open && <p className="env-hint">Tap to open</p>}
       </section>
 
-      <div className="venue-row">
-        {d.venue && (
-          <article className="venue-card" style={{ '--tape': wesFor(d.venue.spot.title) }}>
-            <SpotPhoto spot={d.venue.spot} size={70} className="venue-photo" />
-            <div>
-              <p className="eyebrow">Throw it at</p>
-              <h3>{d.venue.spot.title}</h3>
-              <p className="sub">{[d.venue.spot.venue, d.venue.spot.city].filter(Boolean).join(' · ')}{d.venue.spot.is_demo && <span className="badge demo">demo</span>}</p>
-              {d.venue.because.length > 0 && <p className="because">for your love of {d.venue.because.join(', ')}</p>}
-            </div>
-          </article>
-        )}
-        <article className="style-card">
-          <p className="eyebrow">Your style of the night</p>
-          <h3>{d.invite.dress || 'Come as you are'}</h3>
-          <div className="swatches big" aria-label="Wear these colours">
-            {d.theme.palette.map((c) => <span key={c} style={{ background: c }} title={c} />)}
-          </div>
-          <p className="muted small">Wear these colours, light candles, and put {d.playlist.fromSaves[0]?.title || d.playlist.more[0]?.title || 'a record'} on first.</p>
-        </article>
-      </div>
-
-      <Numbers numbers={d.numbers} />
-      <RunOfShow run={d.run} palette={d.theme.palette} />
-      <Guests guests={d.guests} />
-
-      <div className="host-grid">
-        <Invite invite={d.invite} />
-        <section className="panel">
-          <h2><Icon name="cup" /> Pour this</h2>
-          <IdeaList title="Wine" items={d.drinks.wine} />
-          <IdeaList title="Cocktails" items={d.drinks.cocktails} />
-          <IdeaList title="Without alcohol" items={d.drinks.zero} />
-        </section>
-        <section className="panel">
-          <h2><Icon name="sparkle" /> Serve this</h2>
-          <IdeaList title="As people arrive" items={d.food.snacks} />
-          <IdeaList title="Main" items={d.food.main} />
-          <IdeaList title="Sweet" items={d.food.sweet} />
-        </section>
-        <section className="panel span-all">
-          <h2><Icon name="music" /> Press play</h2>
-          <ul className="records">
-            {[...d.playlist.fromSaves.map((x) => ({ ...x, mine: true })), ...d.playlist.more].map((x) => (
-              <li key={x.title} className="record">
-                <Vinyl title={x.title} size={48} />
-                <span>
-                  <b>{x.url ? <a href={x.url} target="_blank" rel="noreferrer">{x.title}</a> : x.title}</b>
-                  <small className="muted">{x.creator}{x.mine ? ' · from your saves' : ''}</small>
-                </span>
-              </li>
+      {open && (
+        <section className="spread" aria-label="What’s inside">
+          <p className="spread-head"><span>Inside</span> a {d.theme.name.toLowerCase()}, from {d.theme.from} of your saves</p>
+          <div className="spread-grid">
+            {items.map((it, i) => (
+              <button key={it.key} className={`spread-item it-${it.key}`} style={{ '--d': `${i * 70}ms`, '--t': `${((i * 37) % 7) - 3}deg` }} onClick={() => setDetail(it.key)}>
+                {it.node}
+                <span className="spread-label">{it.label}</span>
+              </button>
             ))}
-          </ul>
-        </section>
-      </div>
-
-      <Scene scene={d.scene} />
-      <Games games={d.games} />
-      <Countdown prep={d.prep} />
-
-      {d.moodboard.length > 0 && (
-        <section className="shelf-section">
-          <div className="shelf-head">
-            <div>
-              <h2><Icon name="image" /> The vibe</h2>
-              <p className="shelf-sub">Your own saves, from every app, that set this mood.</p>
-            </div>
           </div>
-          <PinBoard className="collage">
-            {d.moodboard.map((m, i) => (
-              <figure key={m.id} className="collage-snap" style={{ '--tilt': `${((i * 37) % 9) - 4}deg` }}>
-                <span className="pin" aria-hidden />
-                <span className="collage-photo" style={{ background: d.theme.palette[i % d.theme.palette.length] }}>
-                  {m.kind === 'song' ? <Vinyl title={m.title} size={64} /> : <TasteArt name={m.tags.find(hasArt) || 'explorer'} size={60} fill="#fff" />}
-                </span>
-                <figcaption>
-                  <b>{m.url ? <a href={m.url} target="_blank" rel="noreferrer">{m.title}</a> : m.title}</b>
-                  <span>{m.tags.slice(0, 2).join(' · ')}</span>
-                </figcaption>
-              </figure>
-            ))}
-          </PinBoard>
         </section>
       )}
 
-      {d.shop.length > 0 && (
-        <section className="shelf-section">
-          <div className="shelf-head"><h2><Icon name="bag" /> Grab on the way{d.city ? ` in ${d.city}` : ''}</h2></div>
-          <ul className="plan">
-            {d.shop.map((s) => (
-              <li key={s.id}>
-                <Icon name={SPOT_ICON[s.kind]} size={16} />
-                <span><b>{s.title}</b> <span className="muted">{[s.venue, s.price].filter(Boolean).join(' · ')}</span></span>
-                {s.is_demo && <span className="badge demo">demo</span>}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {view && <Dialog title={view[0]} onClose={() => setDetail(null)} wide={['menu', 'vibe', 'run', 'records', 'guests', 'scene'].includes(detail)}>{view[1]}</Dialog>}
     </>
+  );
+}
+
+/** The ticket for the night itself. */
+function Ticket({ d, when, where }) {
+  return (
+    <div className="ticket big-ticket" style={{ '--tk': d.theme.palette[d.theme.palette.length - 1] || '#f2b8c3' }}>
+      <div className="ticket-main">
+        <span className="ticket-kicker">Admit one · {d.occasion.label}</span>
+        <h3>{d.theme.name}</h3>
+        <p className="sub">{when} · {where}</p>
+        <p className="muted small">Dress: {d.invite.dress || 'come as you are'}. First record: {d.playlist.fromSaves[0]?.title || d.playlist.more[0]?.title}.</p>
+      </div>
+      <div className="ticket-stub"><span className="barcode" aria-hidden /><span className="serial">No. {String(d.theme.from * 7919).padStart(6, '0')}</span></div>
+    </div>
   );
 }
 
@@ -336,9 +407,7 @@ const MOTIFS = {
 };
 
 /** A live preview of the invitation in the theme's type, colours and motif. */
-function Invite({ invite }) {
-  const [when, setWhen] = useState('Saturday, 8pm');
-  const [where, setWhere] = useState('at mine');
+function Invite({ invite, when, where, setWhen, setWhere }) {
   const { toast } = useActions();
   const text = [invite.headline, invite.line, `${when}, ${where}`, invite.dress && `Dress: ${invite.dress}`].filter(Boolean).join('\n');
   const copy = async () => {

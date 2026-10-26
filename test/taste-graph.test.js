@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { autoTag, guessKind, readSignals } from '../server/taxonomy.js';
 import { cityFrom, csv, parseImport } from '../server/importers.js';
-import { connectSaves, cosine, distanceM, findPatterns, inWindow, interpret, pairSpots, perfectDay, rankSpots, tasteBoard, tasteCharacter, tasteProfile, toPercent } from '../server/taste-graph.js';
+import { connectSaves, cosine, tasteWeb, distanceM, findPatterns, inWindow, interpret, pairSpots, perfectDay, rankSpots, tasteBoard, tasteCharacter, tasteProfile, toPercent } from '../server/taste-graph.js';
 
 test('autoTag: keywords and music genres become shared tags', () => {
   assert.deepEqual(new Set(autoTag('Candlelit wine bar')), new Set(['moody', 'intimate', 'romantic', 'wine bar', 'night out']));
@@ -217,4 +217,21 @@ test('pairSpots: each event gets the best place within walking distance, in the 
   assert.equal(pairs[0].place.spot.id, 10);
   assert.ok(pairs[0].walk >= 1 && pairs[0].walk <= 3);
   assert.deepEqual(pairs[0].because, ['coffee', 'vinyl']);
+});
+
+test('tasteWeb: six sides of a life, scaled to your biggest, with what leads each', () => {
+  const saves = interpret([
+    save(1, 'song', 'spotify', ['jazz', 'vinyl']),
+    save(2, 'song', 'spotify', ['jazz', 'soul']),
+    save(3, 'place', 'google_maps', ['pastry', 'coffee']),
+    save(4, 'look', 'instagram', ['tailoring']),
+  ]);
+  const web = tasteWeb(tasteProfile(saves));
+  assert.deepEqual(web.map((a) => a.key), ['music', 'food', 'nights', 'culture', 'style', 'travel']);
+  const music = web.find((a) => a.key === 'music');
+  assert.equal(music.value, 1);
+  assert.equal(music.top[0], 'jazz');
+  assert.ok(web.every((a) => a.value >= 0 && a.value <= 1));
+  assert.ok(web.find((a) => a.key === 'style').value < 1);
+  assert.equal(tasteWeb(new Map()), null);
 });

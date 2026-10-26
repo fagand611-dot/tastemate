@@ -4,7 +4,7 @@ import { requireUser } from '../auth.js';
 import { friendIds, hydrateSave, hydrateSpot, tx, upsertSpot } from '../db.js';
 import { parseImport } from '../importers.js';
 import { SAVE_KINDS, SAVE_SOURCES, autoTag, cleanTags, guessKind } from '../taxonomy.js';
-import { connectSaves, cosine, findPatterns, interpret, pairSpots, perfectDay, rankSpots, tasteBoard, tasteCharacter, tasteProfile, toPercent } from '../taste-graph.js';
+import { connectSaves, cosine, tasteWeb, findPatterns, interpret, pairSpots, perfectDay, rankSpots, tasteBoard, tasteCharacter, tasteProfile, toPercent } from '../taste-graph.js';
 import { loadCreatorCache } from '../enrich.js';
 import { parsePost } from '../posts.js';
 import { OCCASIONS, planOccasion } from '../occasions.js';
@@ -139,6 +139,7 @@ export default function savesRoutes(r, { db, venueFeed, enricher }) {
     res.json({
       character,
       board: tasteBoard(saves, clusters, profile),
+      web: tasteWeb(profile),
       collage: tasteCollage(saves, profile, { city, nightOwl: owl }),
       day,
       city,

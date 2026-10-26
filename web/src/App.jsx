@@ -99,6 +99,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/you" replace />} />
             <Route path="/you" element={<You />} />
+            <Route path="/you/:section" element={<You />} />
             <Route path="/saves" element={<Navigate to="/you" replace />} />
             <Route path="/next" element={<Next />} />
             <Route path="/host" element={<Host />} />

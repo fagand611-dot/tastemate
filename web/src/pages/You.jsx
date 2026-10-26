@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import Icon, { SAVE_ICON } from '../components/Icon.jsx';
 import TasteArt from '../components/TasteArt.jsx';
 import Mascot from '../components/Mascot.jsx';
-import Collage from '../components/Collage.jsx';
+import Collage, { Thing } from '../components/Collage.jsx';
 import TasteBoard from '../components/TasteBoard.jsx';
 import { Vinyl } from '../components/Retro.jsx';
 import { uploadPhoto } from '../components/photo.js';
@@ -32,6 +32,7 @@ const IMPORTS = [
 // Who you are, how you roll, the sides of you (with proof), your perfect day,
 // where to stretch, and your taste twin. Your raw saves stay tucked away.
 export default function You() {
+  const { section } = useParams();
   const you = useApi('/you');
   const saves = useApi('/saves');
   const [filter, setFilter] = useState({ kind: null, source: null });
@@ -48,58 +49,171 @@ export default function You() {
 
   return (
     <Loading state={you}>
-      {(d) => (
-        <div className="you">
-          {d.character ? <Character c={d.character} /> : <Welcome />}
-          {d.lookingUp > 0 && <p className="notice small">Looking up {d.lookingUp} more artist{d.lookingUp > 1 ? 's' : ''}… your character will sharpen in a moment.</p>}
-          {d.character && d.board?.tastes.length > 0 && (
+      {(d) => {
+        if (!section) return <Home d={d} saves={saves.data} />;
+        const page = {
+          web: d.character && (
+            <>
+              <TasteWeb web={d.web} name={d.character.name} />
+              <Dials dials={d.character.dials} />
+            </>
+          ),
+          connected: d.board?.tastes.length > 0 && (
             <section className="you-section">
-              <div className="you-head">
-                <h2>Everything is connected</h2>
-                <p>You in the middle, and everything your saves say you love, tied together.</p>
-              </div>
+              <div className="you-head"><h2>Everything is connected</h2><p>You in the middle, and everything your saves say you love, tied together.</p></div>
               <BoardWithUser board={d.board} character={d.character} />
             </section>
-          )}
-          {d.character && d.collage && (
+          ),
+          world: d.collage && (
             <section className="you-section">
-              <div className="you-head">
-                <h2>Your world, in one picture</h2>
-                <p>Everything you’ve saved, as the things you’d carry and the room you’d live in.</p>
-              </div>
-              <CollageWithUser collage={d.collage} title={d.character.name} />
+              <div className="you-head"><h2>Your world, in one picture</h2><p>Everything you’ve saved, as the things you’d carry and the room you’d live in.</p></div>
+              <CollageWithUser collage={d.collage} title={d.character?.name} />
             </section>
-          )}
-          {d.character && (
-            <>
-              <Dials dials={d.character.dials} />
-              <Sides sides={d.character.sides} />
-              <PerfectDay day={d.day} city={d.city} />
-              <Stretch tags={d.character.stretch} why={d.character.stretchWhy} />
-              <Twin twin={d.twin} />
-            </>
-          )}
-
-          <section className="you-section">
-            <div className="you-head">
-              <h2>Feed your Tastemate</h2>
-              <p>The more you bring in, the sharper your character gets.</p>
-            </div>
-            <div className="saves-tools">
-              <Importer onDone={reload} />
-              <AddSave onDone={reload} />
-            </div>
-          </section>
-
-          {saves.data?.saves.length > 0 && (
-            <details className="drawer">
-              <summary><Icon name="bookmark" size={18} /> Everything you’ve saved <span className="muted">{saves.data.saves.length}</span><Icon name="down" size={16} className="chev" /></summary>
+          ),
+          sides: d.character && <Sides sides={d.character.sides} />,
+          day: <PerfectDay day={d.day} city={d.city} />,
+          stretch: d.character && <Stretch tags={d.character.stretch} why={d.character.stretchWhy} />,
+          add: (
+            <section className="you-section">
+              <div className="you-head"><h2>Feed your Tastemate</h2><p>The more you bring in, the sharper your character gets.</p></div>
+              <div className="saves-tools">
+                <Importer onDone={reload} />
+                <AddSave onDone={reload} />
+              </div>
+            </section>
+          ),
+          saves: saves.data && (
+            <section className="you-section">
+              <div className="you-head"><h2>Everything you’ve saved</h2><p>{saves.data.saves.length} saves, each broken down into what it says about you.</p></div>
               <SaveList data={saves.data} filter={filter} setFilter={setFilter} onChange={reload} />
-            </details>
-          )}
+            </section>
+          ),
+        }[section];
+        return (
+          <div className="you subpage">
+            <Link to="/you" className="back-link"><Icon name="back" size={18} /> You</Link>
+            {page || <Empty>Nothing here yet. <Link to="/you/add">Bring in a few saves</Link> and it’ll fill in.</Empty>}
+            {section !== 'add' && <AddFab />}
+          </div>
+        );
+      }}
+    </Loading>
+  );
+}
+
+/** The floating "add saves" button, so feeding your Tastemate is one tap away. */
+function AddFab() {
+  return <Link to="/you/add" className="fab"><Icon name="plus" size={20} /> <span>Add saves</span></Link>;
+}
+
+/** You, at a glance: your character, then a tile for each part of you to tap into. */
+function Home({ d, saves }) {
+  const c = d.character;
+  const bag = d.collage?.bag.slice(0, 3) || [];
+  const tiles = c ? [
+    { to: 'web', title: 'Your taste web', sub: 'and how you roll', color: '#f2b8c3', art: <MiniWeb web={d.web} /> },
+    { to: 'world', title: 'Your bag & room', sub: 'your world in one picture', color: '#e9b949', art: <span className="tile-things">{bag.map((x) => <Thing key={x.obj} obj={x.obj} size={44} />)}</span> },
+    { to: 'connected', title: 'Everything is connected', sub: `${d.board?.tastes.length || 0} tastes, tied together`, color: '#9cc9d9', art: <span className="tile-words">{d.board?.tastes.slice(0, 3).map((t) => <b key={t.tag}>{t.tag}</b>)}</span> },
+    { to: 'sides', title: 'The sides of you', sub: c.sides.map((sd) => sd.name).slice(0, 2).join(' · '), color: '#a9d6c6', art: <TasteArt name={c.sides[0]?.key || c.key} size={52} fill="#00877a" /> },
+    { to: 'day', title: d.city ? `A perfect day in ${d.city}` : 'Your perfect day', sub: d.day.length ? d.day.map((x) => x.slot).join(', ') : 'set your home city', color: '#f4c09c', art: <TasteArt name="Morning" size={52} fill="#c8372d" /> },
+    { to: 'stretch', title: 'Stretch your taste', sub: c.stretch.slice(0, 3).join(', ') || 'a little beyond your usual', color: '#c4b2dc', art: <TasteArt name={c.stretch[0] || 'explorer'} size={52} fill="#5d3f6a" /> },
+  ] : [];
+  return (
+    <div className="you home">
+      {c ? <Character c={c} /> : <Welcome />}
+      {d.lookingUp > 0 && <p className="notice small">Looking up {d.lookingUp} more artist{d.lookingUp > 1 ? 's' : ''}… your character will sharpen in a moment.</p>}
+      <div className="quick">
+        <Link to="/you/add" className="quick-btn primary"><Icon name="plus" size={20} /><span>Add saves</span></Link>
+        <Link to="/you/saves" className="quick-btn"><Icon name="bookmark" size={20} /><span>{saves ? `${saves.saves.length} saved` : 'Your saves'}</span></Link>
+        <Link to="/next" className="quick-btn"><Icon name="pin" size={20} /><span>Go out</span></Link>
+        <Link to="/host" className="quick-btn"><Icon name="cup" size={20} /><span>Host</span></Link>
+      </div>
+      {tiles.length > 0 && (
+        <div className="tiles">
+          {tiles.map((t) => (
+            <Link key={t.to} to={`/you/${t.to}`} className="tile" style={{ '--tile': t.color }}>
+              <span className="tile-art">{t.art}</span>
+              <span className="tile-text"><b>{t.title}</b><small>{t.sub}</small></span>
+              <Icon name="chevron" size={18} className="tile-go" />
+            </Link>
+          ))}
         </div>
       )}
-    </Loading>
+      <Twin twin={d.twin} />
+    </div>
+  );
+}
+
+// The six sides of the web, in a fixed order round the clock.
+const WEB_R = 92;
+const webPoint = (i, n, v, r = WEB_R) => {
+  const a = -Math.PI / 2 + (i / n) * 2 * Math.PI;
+  return [Math.cos(a) * r * v, Math.sin(a) * r * v];
+};
+
+/** A tiny web for the tile. */
+function MiniWeb({ web }) {
+  if (!web) return <TasteArt name="explorer" size={52} fill="#c8372d" />;
+  const pts = web.map((a, i) => webPoint(i, web.length, Math.max(0.12, a.value), 26).join(',')).join(' ');
+  return (
+    <svg viewBox="-30 -30 60 60" width="60" height="60" aria-hidden>
+      {[1, 0.5].map((k) => <polygon key={k} points={web.map((_, i) => webPoint(i, web.length, k, 26).join(',')).join(' ')} fill="none" stroke="#2b1d22" strokeOpacity="0.25" />)}
+      <polygon points={pts} fill="#c8372d" fillOpacity="0.85" />
+    </svg>
+  );
+}
+
+/**
+ * Your taste web: one shape, six sides of a life (music, food & drink,
+ * nights out, art & culture, style, travel), with what leads each side.
+ */
+function TasteWeb({ web, name }) {
+  const [on, setOn] = useState(null);
+  if (!web) return null;
+  const n = web.length;
+  const shape = web.map((a, i) => webPoint(i, n, Math.max(0.06, a.value)).join(',')).join(' ');
+  const top = [...web].sort((a, b) => b.value - a.value)[0];
+  return (
+    <section className="you-section">
+      <div className="you-head">
+        <h2>Your taste web</h2>
+        <p>Where your taste goes, side by side. {top && <>Your biggest side is <b>{top.label.toLowerCase()}</b>.</>}</p>
+      </div>
+      <div className="web-card">
+        <svg viewBox="-215 -150 430 300" className="web" role="img" aria-label={`${name}'s taste web: ${web.map((a) => `${a.label} ${Math.round(a.value * 100)}%`).join(', ')}`}>
+          {[0.25, 0.5, 0.75, 1].map((k) => (
+            <polygon key={k} points={web.map((_, i) => webPoint(i, n, k).join(',')).join(' ')} className="web-ring" />
+          ))}
+          {web.map((a, i) => {
+            const [x, y] = webPoint(i, n, 1);
+            return <line key={a.key} x1="0" y1="0" x2={x} y2={y} className="web-spoke" />;
+          })}
+          <polygon points={shape} className="web-shape" />
+          {web.map((a, i) => {
+            const [x, y] = webPoint(i, n, Math.max(0.06, a.value));
+            const [lx, ly] = webPoint(i, n, 1.2);
+            const anchor = Math.abs(lx) < 8 ? 'middle' : lx > 0 ? 'start' : 'end';
+            return (
+              <g key={a.key} className={`web-axis ${on === i ? 'on' : ''}`} tabIndex={0} onMouseEnter={() => setOn(i)} onMouseLeave={() => setOn(null)} onFocus={() => setOn(i)} onBlur={() => setOn(null)}>
+                <circle cx={x} cy={y} r="14" fill="transparent" />
+                <circle cx={x} cy={y} r={on === i ? 6 : 4.5} className="web-dot" />
+                <text x={lx} y={ly} textAnchor={anchor} className="web-label">{a.label}</text>
+                {a.top[0] && <text x={lx} y={ly + 14} textAnchor={anchor} className="web-sub">{a.top.join(', ')}</text>}
+              </g>
+            );
+          })}
+        </svg>
+        <p className="web-tip" aria-live="polite">
+          {on != null
+            ? <><b>{web[on].label}</b> · {Math.round(web[on].value * 100)}% of your biggest side{web[on].top.length ? <>, led by {web[on].top.join(' and ')}</> : null}</>
+            : 'Tap a side to see what leads it.'}
+        </p>
+        <table className="sr-only">
+          <caption>Taste web</caption>
+          <tbody>{web.map((a) => <tr key={a.key}><th>{a.label}</th><td>{Math.round(a.value * 100)}%</td><td>{a.top.join(', ')}</td></tr>)}</tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 

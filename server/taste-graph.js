@@ -473,6 +473,31 @@ export function tasteBoard(saves, clusters, profile, { size = 14, threads = 16 }
   };
 }
 
+// The taste web: six sides of a life, each a set of tags (or a facet).
+const WEB = [
+  { key: 'music', label: 'Music', test: (t) => facetOf(t) === 'sound' || ['vinyl', 'live music'].includes(t) },
+  { key: 'food', label: 'Food & drink', test: (t) => facetOf(t) === 'food' || ['wine bar', 'cocktails', 'coffee', 'pastry'].includes(t) },
+  { key: 'nights', label: 'Nights out', test: (t) => ['night out', 'late night', 'live music', 'comedy', 'speakeasy', 'rooftop', 'cocktails', 'wine bar', 'lively', 'high-energy'].includes(t) },
+  { key: 'culture', label: 'Art & culture', test: (t) => ['art', 'gallery', 'contemporary art', 'photography', 'architecture', 'design', 'craft', 'books', 'film', 'cinema', 'dark academia', 'classical'].includes(t) },
+  { key: 'style', label: 'Style', test: (t) => ['tailoring', 'vintage', 'minimal', 'outerwear', 'linen', 'streetwear', 'classic', 'dark academia'].includes(t) },
+  { key: 'travel', label: 'Travel', test: (t) => facetOf(t) === 'place' },
+];
+
+/**
+ * Your taste web: how much of your taste goes to each side of life, 0–1
+ * relative to your biggest,
+ * with the two tags that lead each side.
+ */
+export function tasteWeb(profile) {
+  const axes = WEB.map(({ key, label, test }) => {
+    const tags = [...profile.entries()].filter(([t, v]) => v > 0 && !t.startsWith('creator:') && test(t)).sort((a, b) => b[1] - a[1]);
+    return { key, label, raw: tags.reduce((a, [, v]) => a + v, 0), top: tags.slice(0, 2).map(([t]) => t) };
+  });
+  const max = Math.max(...axes.map((a) => a.raw));
+  if (!(max > 0)) return null;
+  return axes.map(({ raw, ...a }) => ({ ...a, value: +(raw / max).toFixed(2) }));
+}
+
 /** Metres between two points on Earth. */
 export function distanceM(a, b) {
   const R = 6371000;

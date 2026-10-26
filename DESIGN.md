@@ -147,10 +147,14 @@ character (`tasteCharacter`), never as a chart:
   turntable, candles, a coat…) is called up by tastes and scored by how
   strong they are; objects that can be, are labelled from a real save of the
   right kind ("The Secret History", "a croissant from Laminated", "Pink Moon
-  on the turntable"), each save used once and never an @handle. The bag is a
-  flat-lay on a cutting mat around an open tote; the room is a drawn scene
-  (shelf, sideboard, rug, a window onto your home city, night if you're a
-  night owl) with numbered things and a handwritten key. A line reflects it
+  on the turntable"), each save used once and never an @handle. Both are
+  drawn like a Wes Anderson set: flat colour, no outlines, centred and
+  symmetrical, with a title card. The bag is knolled on Mendl's pink around
+  an open tote ("The contents of Demo's bag", No. 1, No. 2…); the room is a
+  straight-on cutaway (arched window onto your home city between mustard
+  curtains, night if you're a night owl; a sideboard with the turntable in
+  the middle; frames, lamps and plants in mirrored pairs, so a single lamp
+  stands on both sides) with numbered things and a key. A line reflects it
   back: *Never leaves the house without a book, a coffee and something from
   a bakery.*
 - **Friends' titles:** friends, your taste twin and Host guests all show
@@ -160,23 +164,35 @@ character (`tasteCharacter`), never as a chart:
   photo, cropped and shrunk to 320px in the browser and shown as a taped
   polaroid on the character card and in the top bar.
 
-It's drawn as a playful card with a cartoon emblem (`TasteArt`), sticker-
-style side cards and dial knobs. Side colours are three categorical slots
-validated as a set for colour-blind separation on both themes, and text
-always stays in text colours. **Why?** on a pick in Next is the one
-explanatory picture: streams from your apps, through the tastes they share,
-pouring into the pick's match ring, with friends and extras in grey and
-hints dashed.
+- **Your taste web** (`tasteWeb`): the profile as one shape, six sides of a
+  life (music, food & drink, nights out, art & culture, style, travel), each
+  relative to your biggest side and labelled with the two tastes that lead
+  it. One series, so no legend; hover or tap a side for its detail; a table
+  for screen readers. **How you roll** sits underneath it.
+
+**You works like an app.** The home screen is your character, four quick
+buttons (add saves, your saves, go out, host) and a tile for each part of
+you (taste web, bag & room, everything is connected, sides, perfect day,
+stretch), each opening its own screen (`/you/:section`) with a back link. A
+floating **Add saves** button is on every screen, so feeding your Tastemate
+is one tap, not a scroll to the bottom.
+
+**Why?** on a pick in Next is a postcard, not a chart: the place's photo on
+the front ("Greetings from Stoneybatter"), and on the back a handwritten
+note in plain words ("It's cozy, vinyl and coffee, which is very you. Think
+'Candle-lit reading nook' from your Pinterest. Maya saved it too."), your
+match as the stamp and a postmark from the city.
 
 ### Look and feel
 
-Wes Anderson colours meet Pop Mart toys, on paper white, with the idea that
-*everything is connected* running through it (red string, pins, crosswords):
+Wes Anderson sets with a Pop Mart character, on paper white, with the idea
+that *everything is connected* running through it (red string, pins,
+crosswords):
 
-- **Palette:** flat Wes Anderson blocks (Mendl's pink, sky, butter, mint,
-  peach, lilac, cream) with navy ink and a coral accent; red string
-  (`--thread`) for anything that ties things together. Dark mode is navy
-  with the same blocks. Side colours (teal, coral, violet) are validated as
+- **Palette:** flat Wes Anderson blocks with real contrast: lobby-boy red
+  (the accent), mustard, Mendl's pink, teal, powder blue and maroon, on
+  white, with aubergine-black ink; red string (`--thread`) for anything
+  that ties things together. Dark mode is navy with the same blocks. Side colours (teal, coral, violet) are validated as
   a set for colour-blind separation on both themes.
 - **Objects for things:** events are old movie tickets (ADMIT ONE, a stub
   with the date, a barcode and a serial number), places and products are
@@ -187,11 +203,13 @@ Wes Anderson colours meet Pop Mart toys, on paper white, with the idea that
 - **Character art:** the Tastemate mascot, a round big-eyed Crybaby-ish
   character with blush cheeks and a single tear, holding a sticker of your
   taste, on a candy-striped pastry-box card. It blinks and bobs.
-- **Type:** Jost for headlines (geometric, a little retro), Nunito for
-  text, 16px base.
-- **Interaction:** outlined buttons and cards with a hard offset shadow
-  that press flat, cards that tilt on hover, stickers that wiggle, pages
-  that float in, a floating tab bar on phones. Everything respects
+- **Type:** Jost (Futura-like) in spaced capitals for titles, labels and
+  buttons, the way Wes Anderson titles are set; Playfair Display italic for
+  the chic bits (taglines, titles of people, captions); DM Sans for text,
+  16px base.
+- **Interaction:** flat, outlined cards with no drop shadows, cards that
+  tilt on hover, stickers that wiggle, pages that float in, a floating tab
+  bar and an add button on phones. Everything respects
   reduced-motion settings.
 
 ## 5. Taste → action
@@ -229,6 +247,14 @@ person fills it in. Spots added this way are visible to the person who
 added them and their friends only.
 
 ### Host (`server/occasions.js`)
+
+The evening arrives as an envelope in the theme's colours, sealed with red
+wax and addressed to you and your guests. Tap it and it opens: the
+invitation rises out, and everything in it spreads out below like things
+on a table (the invitation, a ticket for the night, the menu card, a record
+in its sleeve, a matchbook from the venue, dress-code swatches, a luggage
+tag of guests, the running order, the scene, a playing card, a to-do
+notepad, polaroids and a receipt for the shopping). Each opens its detail.
 
 The theme is the cluster that best fits the occasion's leaning (date night
 leans *romantic* and *intimate*, house party *lively*), switchable by the

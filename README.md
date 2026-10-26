@@ -68,12 +68,16 @@ posts still works.
 
 ## What's in it
 
-- **You** (the first tab): your Tastemate character, the way a personality
-  test reads you, not a list of what you saved:
+- **You** (the first tab), laid out like an app: your character on top,
+  quick buttons and a tile for each part of you, each opening its own
+  screen, and an **Add saves** button always one tap away. It reads you the
+  way a personality test does, not as a list of what you saved:
   - a name, tagline and one-liner: *The Late-Night Listener, with a
     candlelit streak. You're drawn to low-lit rooms, records with a story
     and slow evenings.* With a cartoon emblem, and a share button;
-  - **How you roll:** five dials (early bird ↔ night owl, homebody ↔ out
+  - **Your taste web:** a spider web of six sides of your life (music,
+    food & drink, nights out, art & culture, style, travel), with
+  - **How you roll** underneath: five dials (early bird ↔ night owl, homebody ↔ out
     and about, classic ↔ fresh, calm ↔ lively, local ↔ wanderer);
   - **The sides of you:** your top three sides, each proved by a few saves
     broken down into what they say;
@@ -102,8 +106,9 @@ posts still works.
   with a short reason, plus **Something a little different** from your
   stretch tastes. Your own saves in that city come first (*Don't forget,
   you saved these*). Loving London artists counts towards London spots, and
-  **under-the-radar** places get a boost. **Why?** on any pick draws the
-  streams from your apps, through the tastes they share, into its match ring.
+  **under-the-radar** places get a boost. **Why?** on any pick is a postcard
+  from your Tastemate: the place on the front, a handwritten note on the
+  back saying which of your saves led there.
   **Make a night of it** pairs a show with a place a short walk away.
   Events look like old movie tickets; places and things show a photo with
   their taste icon as a label.
@@ -111,7 +116,9 @@ posts still works.
   Tastemate reads the date, time, venue, city and price into an event
   for you to check. Friends see it too. Optionally follow venue accounts
   through Instagram's Business Discovery API.
-- **Host:** pick an occasion (dinner party, house party, date night,
+- **Host:** the evening comes as an envelope; open it and the invitation,
+  a ticket, the menu, a record and the rest spill out, each opening its
+  detail. Pick an occasion (dinner party, house party, date night,
   birthday, brunch) and get one theme from your clusters, with wine,
   cocktails, a zero-proof drink, food, a playlist from your own saves, an
   invitation styled in the theme, a pinned collage of your saves, a venue
