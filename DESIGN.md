@@ -127,6 +127,31 @@ explanatory picture: streams from your apps, through the tastes they share,
 pouring into the pick's match ring, with friends and extras in grey and
 hints dashed.
 
+### Look and feel
+
+A lifestyle app should feel like a treat, so the visual language is cute,
+soft and a little playful, while staying calm enough to scan:
+
+- **Palette:** pastels after Pop Mart's Crybaby art and Monet's water
+  lilies (blush pink, lilac, sky, mint, butter, peach) on cream, with plum
+  instead of black for text. A soft, blurred Monet wash sits behind every
+  page. Dark mode is a plum night with the same pastels glowing. Side colours
+  that identify things (lilac, pink, sky) are validated as a set for
+  colour-blind separation on both themes; mint and butter stay decorative.
+- **Character art:** the Tastemate mascot, a round big-eyed character with
+  blush cheeks and a single tear, tinted by your top side and holding a
+  sticker of your taste. It blinks and bobs, appears on sign-in, on You, in
+  the Host banner and in empty states. Taste stickers have plum outlines on
+  pastel and light outlines on dark.
+- **Type:** Fredoka (rounded) for headlines, Nunito for text, 16px base.
+- **Interaction:** candy buttons with a chunky edge that squishes on press,
+  cards that lift and tilt on hover, stickers that wiggle, dial knobs that
+  spring into place, pages and sections that float in, bouncy toasts, a
+  floating tab bar on phones. Everything respects reduced-motion settings.
+- **Spacing:** a consistent rhythm (24px radius cards, 56–60px between
+  sections, generous padding), short reasons on cards with the detail one
+  tap away.
+
 ## 5. Taste → action
 
 ### Next (`rankSpots`)

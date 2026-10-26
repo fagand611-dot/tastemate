@@ -3,6 +3,7 @@ import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from
 import { api } from './api.js';
 import Icon from './components/Icon.jsx';
 import { ActionsProvider } from './components/actions.jsx';
+import { MascotFace } from './components/Mascot.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import Login from './pages/Login.jsx';
 import Next from './pages/Next.jsx';
@@ -83,7 +84,7 @@ export default function App() {
     <AuthCtx.Provider value={{ user, setUser, refresh, logout }}>
       <ActionsProvider>
         <header className="topbar">
-          <Link to="/" className="brand">tastemate</Link>
+          <Link to="/" className="brand"><MascotFace /><span className="brand-word">tastemate</span></Link>
           <nav className="topnav">
             {NAV.map(([to, label]) => (
               <NavLink key={to} to={to}>{label}</NavLink>

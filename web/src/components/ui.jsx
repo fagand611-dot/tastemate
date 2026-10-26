@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api.js';
+import Mascot from './Mascot.jsx';
 
 /** Load JSON from the API; returns { data, error, loading, reload, setData }. */
 export function useApi(path) {
@@ -38,5 +39,10 @@ export function PageHead({ title, intro, children }) {
 }
 
 export function Empty({ children }) {
-  return <div className="empty">{children}</div>;
+  return (
+    <div className="empty">
+      <Mascot size={72} color="lilac" />
+      <div>{children}</div>
+    </div>
+  );
 }

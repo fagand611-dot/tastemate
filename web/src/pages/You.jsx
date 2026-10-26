@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import Icon, { SAVE_ICON } from '../components/Icon.jsx';
 import TasteArt from '../components/TasteArt.jsx';
+import Mascot from '../components/Mascot.jsx';
 import { useActions } from '../components/actions.jsx';
 import { clusterVar } from '../components/viz.jsx';
 import { Empty, Loading, useApi } from '../components/ui.jsx';
@@ -82,7 +83,7 @@ export default function You() {
 function Welcome() {
   return (
     <section className="character hero-empty">
-      <div className="character-art"><TasteArt name="explorer" size={120} fill="var(--series-1)" /></div>
+      <div className="character-art"><Mascot size={170} prop="explorer" color="pink" /></div>
       <div className="character-body">
         <p className="eyebrow">Meet your Tastemate</p>
         <h1>Who are you, taste-wise?</h1>
@@ -112,7 +113,7 @@ function Character({ c }) {
       <div className="character-blobs" aria-hidden>
         {c.sides.map((sd) => <span key={sd.index} className={`blob b${sd.index}`} style={{ background: clusterVar(sd.index) }} />)}
       </div>
-      <div className="character-art" aria-hidden><TasteArt name={c.key} size={132} fill="var(--series-1)" className="wobble" /></div>
+      <div className="character-art"><Mascot size={190} prop={c.key} color={`color-mix(in srgb, ${clusterVar(0)} 38%, white)`} /></div>
       <div className="character-body">
         <p className="eyebrow">Meet your Tastemate</p>
         <h1>{c.name}</h1>

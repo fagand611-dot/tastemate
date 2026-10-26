@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { qs } from '../api.js';
 import Icon, { SAVE_ICON, SPOT_ICON } from '../components/Icon.jsx';
 import { useActions } from '../components/actions.jsx';
+import Mascot from '../components/Mascot.jsx';
+import { hasArt } from '../components/TasteArt.jsx';
 import { Empty, Loading, PageHead, useApi } from '../components/ui.jsx';
 
 // Host: "I'm having people over" → one theme from your taste clusters, and
@@ -47,13 +49,14 @@ export default function Host() {
 function Plan({ d }) {
   return (
     <>
-      <section className="theme-banner" style={{ '--c0': d.theme.palette[0], '--c1': d.theme.palette[1] || d.theme.palette[0] }}>
-        <div>
+      <section className="theme-banner">
+        <Mascot size={120} color="butter" prop={d.theme.tags.find(hasArt) || 'wine bar'} />
+        <div className="theme-text">
           <p className="eyebrow">{d.occasion.label} · from {d.theme.from} of your saves</p>
           <h2>{d.theme.name}</h2>
           <div className="tags">{d.theme.tags.map((t) => <span key={t} className="tag">{t}</span>)}</div>
         </div>
-        <div className="swatches" aria-label="Palette">
+        <div className="swatches" aria-label="The evening’s colours">
           {d.theme.palette.map((c) => <span key={c} style={{ background: c }} title={c} />)}
         </div>
       </section>

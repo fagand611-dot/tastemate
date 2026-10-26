@@ -5,6 +5,7 @@ import Icon, { SAVE_ICON, SPOT_ICON } from '../components/Icon.jsx';
 import { useActions } from '../components/actions.jsx';
 import { Empty, Loading, PageHead, useApi } from '../components/ui.jsx';
 import { Dialog, WhyFlow } from '../components/viz.jsx';
+import TasteArt, { hasArt } from '../components/TasteArt.jsx';
 
 const iso = (d) => d.toISOString().slice(0, 10);
 const plus = (n) => iso(new Date(Date.now() + n * 864e5));
@@ -285,8 +286,9 @@ function SpotCard({ spot, match, reasons, onAct }) {
   const when = spotWhen(spot);
   return (
     <article className="card spot-card">
-      <div className="spot-top" style={{ '--h': hueFor(spot.title) }}>
-        <Icon name={SPOT_ICON[spot.kind]} size={22} />
+      <div className={`spot-top g${hueFor(spot.title) % 5}`}>
+        <span className="spot-kind"><Icon name={SPOT_ICON[spot.kind]} size={15} /> {spot.kind}</span>
+        <span className="spot-sticker"><TasteArt name={spot.tags.find(hasArt) || 'explorer'} size={70} fill="#fff" /></span>
         <span className="match">{match}% match</span>
       </div>
       <div className="card-body">
