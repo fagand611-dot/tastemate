@@ -14,7 +14,11 @@
       try {
         var t = localStorage.getItem('tm-theme');
         if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
-      } catch (e) {}
+        var a = localStorage.getItem('tm-accent');
+        document.documentElement.dataset.accent = /^(apricot|sage|lavender|ocean|rose)$/.test(a) ? a : 'apricot';
+      } catch (e) {
+        document.documentElement.dataset.accent = 'apricot';
+      }
     </script>
   </head>
   <body>

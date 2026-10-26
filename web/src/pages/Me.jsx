@@ -5,7 +5,7 @@ import { useAuth } from '../App.jsx';
 import Icon from '../components/Icon.jsx';
 import { useActions } from '../components/actions.jsx';
 import { useApi } from '../components/ui.jsx';
-import { useTheme } from '../theme.js';
+import { ACCENTS, useAccent, useTheme } from '../theme.js';
 import { uploadPhoto } from '../components/photo.js';
 
 const LINKS = [
@@ -22,6 +22,7 @@ export default function Me() {
   const friends = useApi('/friends');
   const apps = useApi('/connect');
   const [theme, setTheme] = useTheme();
+  const [accent, setAccent] = useAccent();
   const [city, setCity] = useState(user.home_city || '');
   const { toast } = useActions();
 
@@ -111,6 +112,15 @@ export default function Me() {
           {[['system', 'Auto', 'monitor'], ['light', 'Light', 'sun'], ['dark', 'Dark', 'moon']].map(([v, l, i]) => (
             <button key={v} role="radio" aria-checked={theme === v} className={theme === v ? 'on' : ''} onClick={() => setTheme(v)}>
               <Icon name={i} size={16} /> {l}
+            </button>
+          ))}
+        </div>
+        <span className="label" style={{ marginTop: 16, display: 'block' }}>Colour</span>
+        <div className="accent-picks" role="radiogroup" aria-label="Colour">
+          {ACCENTS.map(([k, label, swatch]) => (
+            <button key={k} role="radio" aria-checked={accent === k} className="accent-pick" onClick={() => setAccent(k)}>
+              <i style={{ background: swatch }} />
+              {label}
             </button>
           ))}
         </div>
