@@ -1461,3 +1461,55 @@ h1 { letter-spacing: 0.04em; }
 .themes .theme-pick b, .themes .theme-pick.on b { color: var(--ink); }
 .themes .theme-pick small { white-space: normal; overflow-wrap: anywhere; }
 @media (max-width: 640px) { .host-controls .seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; } .host-controls .seg button { flex: none; } }
+
+/* ==========================================================================
+   Softer: rounder corners everywhere, hairline borders instead of ink
+   outlines, and a gentle lifted shadow. Paper objects (tickets, polaroids,
+   the envelope and what spills out of it) keep their own shapes.
+   ========================================================================== */
+:root {
+  --radius: 28px;
+  --radius-sm: 20px;
+  --soft-line: color-mix(in srgb, var(--ink) 13%, transparent);
+  --soft-shadow: 0 12px 32px -20px rgba(43, 29, 34, 0.35), 0 1px 2px rgba(43, 29, 34, 0.05);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { --soft-shadow: 0 14px 34px -18px rgba(0, 0, 0, 0.7); } }
+:root[data-theme='dark'] { --soft-shadow: 0 14px 34px -18px rgba(0, 0, 0, 0.7); }
+
+.panel, .card-plain, .card, .stat, .menu, .auth-form, .drawer, .dial, .twin, .people li, .side-card, .day-slot, .board-wrap,
+.venue-card, .style-card, .theme-banner, .numbers li, .run li, .guest, .scene-card, .web-card, .tile, .connect-app, .quick-btn,
+.theme-pick, .room-key, .guest-details, .guest-rsvp, .notice, .collage, .postcard-back {
+  border: 1px solid var(--soft-line) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: var(--soft-shadow) !important;
+}
+.quick-btn, .numbers li, .run li, .connect-app, .theme-pick, .day-slot, .people li, .dial { border-radius: 24px !important; }
+.quick-btn.primary { border-color: transparent !important; }
+.theme-pick.on { box-shadow: 0 0 0 2px var(--ink), var(--soft-shadow) !important; }
+.tile { border-color: transparent !important; }
+.tile-art, .connect-icon, .scene-icon, .menu-icon, .save-icon, .run-time, .side-share, .board-name, .match, .taste-match, .badge.status, .chip-facet {
+  border-width: 1px !important;
+  border-color: color-mix(in srgb, #2b1d22 18%, transparent) !important;
+  box-shadow: none !important;
+}
+.dialog { border-radius: 32px; }
+@media (max-width: 640px) { .dialog { border-radius: 28px 28px 0 0; } }
+.title-card { border-radius: 30px; box-shadow: inset 0 0 0 16px #fffaf0, inset 0 0 0 17px color-mix(in srgb, #6b1f2a 70%, transparent), var(--soft-shadow); }
+.knoll, .room-frame { border-radius: 30px; }
+.invite, .postcard-front { border-radius: 22px; }
+.snap, .pair-snap, .pair-ticket, .collage-snap { border-radius: 14px; }
+.seg, .tabs { border: 1px solid var(--soft-line) !important; box-shadow: none !important; }
+
+/* Buttons: soft pills. */
+.btn { border-radius: 999px; }
+.btn-outline, .share-btn { border-width: 1px !important; border-color: color-mix(in srgb, var(--ink) 30%, transparent) !important; }
+.btn-primary { box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--accent) 80%, transparent) !important; }
+
+/* Fields: rounder, with a soft focus ring instead of a hard offset. */
+input, select, textarea { border-radius: 16px; border-width: 1px; border-color: var(--soft-line); }
+input:focus, select:focus, textarea:focus { border-color: color-mix(in srgb, var(--accent) 60%, transparent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent); }
+.topbar { border-bottom: 1px solid var(--soft-line) !important; box-shadow: none !important; }
+.topnav a.active { border-width: 1px !important; border-color: color-mix(in srgb, var(--ink) 20%, transparent) !important; box-shadow: none !important; }
+.tabbar { border: 1px solid var(--soft-line) !important; box-shadow: var(--soft-shadow) !important; border-radius: 28px !important; }
+.pair-ticket, .pair-snap, .ticket { border-width: 1px !important; border-color: color-mix(in srgb, #2b1d22 22%, transparent) !important; box-shadow: var(--soft-shadow) !important; }
+.ticket { border-radius: 20px; }
