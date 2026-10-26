@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, qs } from '../api.js';
+import SpotPhoto from '../components/SpotPhoto.jsx';
 import Icon, { SAVE_ICON, SPOT_ICON } from '../components/Icon.jsx';
 import { useActions } from '../components/actions.jsx';
 import { Empty, Loading, PageHead, useApi } from '../components/ui.jsx';
@@ -376,11 +377,10 @@ function SnapCard({ spot, match, reasons, onAct, tilt }) {
   const t = tilt ?? ((hash(spot.title) % 5) - 2) * 0.8;
   return (
     <article className={`snap ${spot.kind}`} style={{ '--tilt': `${t}deg`, '--tape': wesFor(spot.venue || spot.title) }}>
-      <div className="snap-photo" style={{ background: wesFor(spot.title) }}>
-        <TasteArt name={spot.tags.find(hasArt) || 'explorer'} size={86} fill="#fff" />
+      <SpotPhoto spot={spot} className="snap-photo">
         <span className="match">{match}%</span>
         {spot.kind === 'product' && spot.price && <span className="price-tag">{spot.price}</span>}
-      </div>
+      </SpotPhoto>
       <div className="snap-body">
         <h3>{spot.url ? <a href={spot.url} target="_blank" rel="noreferrer">{spot.title}</a> : spot.title}</h3>
         <p className="sub">{[spot.venue, spot.city || 'Ships to you'].filter(Boolean).join(' · ')}{spot.is_demo && <span className="badge demo">demo</span>}</p>
@@ -407,7 +407,7 @@ function PairCard({ pair }) {
         <span className="walk">{walk} min walk</span>
       </div>
       <div className="pair-snap" style={{ '--tape': wesFor(place.spot.title) }}>
-        <span className="pair-photo" style={{ background: wesFor(place.spot.title) }}><TasteArt name={place.spot.tags.find(hasArt) || 'explorer'} size={44} fill="#fff" /></span>
+        <SpotPhoto spot={place.spot} size={44} className="pair-photo" />
         <b>{place.spot.title}</b>
         <span className="sub">{because.length ? `for your love of ${because.join(' & ')}` : place.spot.venue}</span>
       </div>

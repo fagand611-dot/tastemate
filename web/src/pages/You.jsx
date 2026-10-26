@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import Icon, { SAVE_ICON } from '../components/Icon.jsx';
 import TasteArt from '../components/TasteArt.jsx';
 import Mascot from '../components/Mascot.jsx';
+import Collage from '../components/Collage.jsx';
 import TasteBoard from '../components/TasteBoard.jsx';
 import { Vinyl } from '../components/Retro.jsx';
 import { uploadPhoto } from '../components/photo.js';
@@ -60,6 +61,15 @@ export default function You() {
               <BoardWithUser board={d.board} character={d.character} />
             </section>
           )}
+          {d.character && d.collage && (
+            <section className="you-section">
+              <div className="you-head">
+                <h2>Your world, in one picture</h2>
+                <p>Everything you’ve saved, as the things you’d carry and the room you’d live in.</p>
+              </div>
+              <CollageWithUser collage={d.collage} title={d.character.name} />
+            </section>
+          )}
           {d.character && (
             <>
               <Dials dials={d.character.dials} />
@@ -91,6 +101,11 @@ export default function You() {
       )}
     </Loading>
   );
+}
+
+function CollageWithUser({ collage, title }) {
+  const { user } = useAuth();
+  return <Collage collage={collage} name={user.display_name.split(' ')[0]} title={title} />;
 }
 
 function BoardWithUser({ board, character }) {
@@ -292,9 +307,13 @@ function Twin({ twin }) {
     <section className="you-section">
       <div className="you-head"><h2>Your taste twin</h2></div>
       <Link to="/friends" className="twin">
-        <span className="avatar-lg">{twin.display_name[0].toUpperCase()}</span>
+        <span className="friend-face">
+          <Mascot size={58} color="sky" prop={twin.emblem || undefined} tear={false} />
+          {twin.avatar_url && <img src={twin.avatar_url} alt="" />}
+        </span>
         <span>
-          <b>{twin.display_name}</b> is {twin.match}% you.
+          <b>{twin.display_name}</b>{twin.title && <span className="friend-title"> · {twin.title}</span>}
+          <br />is {twin.match}% you.
           {twin.shared.length > 0 && <span className="muted"> You both love {twin.shared.join(', ')}.</span>}
         </span>
         <Icon name="chevron" />

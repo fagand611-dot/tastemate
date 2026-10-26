@@ -83,6 +83,8 @@ posts still works.
   - **Your taste twin** among your friends;
   - **Everything is connected:** you (character and photo) in the middle
     of a crossword of your tastes, tied together with red string;
+  - **Your world, in one picture:** what's in your bag and what your room
+    looks like, drawn from your saves and labelled with them;
   - **Feed your Tastemate:** import the data export from each app (Spotify
     `YourLibrary.json`, Instagram `saved_collections.json`, Google Takeout
     `Saved Places.json` or list CSVs, pasted Pinterest pins) or add a save
@@ -103,7 +105,8 @@ posts still works.
   **under-the-radar** places get a boost. **Why?** on any pick draws the
   streams from your apps, through the tastes they share, into its match ring.
   **Make a night of it** pairs a show with a place a short walk away.
-  Events look like old movie tickets, places like polaroids.
+  Events look like old movie tickets; places and things show a photo with
+  their taste icon as a label.
 - **Events from posts:** paste a venue's Instagram or Facebook post and
   Tastemate reads the date, time, venue, city and price into an event
   for you to check. Friends see it too. Optionally follow venue accounts
@@ -112,11 +115,14 @@ posts still works.
   birthday, brunch) and get one theme from your clusters, with wine,
   cocktails, a zero-proof drink, food, a playlist from your own saves, an
   invitation styled in the theme, a pinned collage of your saves, a venue
-  to throw it at, your style of the night, and where to pick things up in
+  to throw it at, your style of the night, the night hour by hour, who's
+  coming (friends with their taste titles and what each should bring),
+  the scene, ice-breakers, a countdown, and where to pick things up in
   your city.
 - **Profile photo** next to your character, set from Account or the
   character card.
-- **Friends:** mutual friendships with a taste-match %. When a friend saves
+- **Friends:** mutual friendships with a taste-match %, each friend shown
+  with their character and Tastemate title. When a friend saves
   a spot, it shows up in your Next with their name on it.
 
 ## Project layout
@@ -132,6 +138,7 @@ server/
   importers.js      parse each app's data export into saves
   posts.js          read a venue post into an event draft
   occasions.js      plan an occasion from a cluster (pure)
+  collage.js        your bag and your room, drawn from your saves (pure)
   routes/           auth, friends, profile (photo), saves (saves, graph, next, spots, occasion)
   providers/        venue-posts (Instagram Business Discovery), musicbrainz (artist facts)
   seed/             sample spots and demo users

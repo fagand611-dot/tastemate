@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS spots (
   popularity REAL NOT NULL DEFAULT 0.5,
   lat REAL,
   lng REAL,
+  image TEXT,           -- a photo of the place or thing, from its feed
   source TEXT NOT NULL DEFAULT 'local',
   external_id TEXT,
   is_demo INTEGER NOT NULL DEFAULT 0,
@@ -121,6 +122,7 @@ function migrate(db) {
   }
   if (!has('spots', 'added_by')) db.exec('ALTER TABLE spots ADD COLUMN added_by INTEGER REFERENCES users(id) ON DELETE CASCADE');
   if (!has('spots', 'lat')) db.exec('ALTER TABLE spots ADD COLUMN lat REAL; ALTER TABLE spots ADD COLUMN lng REAL');
+  if (!has('spots', 'image')) db.exec('ALTER TABLE spots ADD COLUMN image TEXT');
   if (!has('users', 'avatar')) db.exec('ALTER TABLE users ADD COLUMN avatar TEXT; ALTER TABLE users ADD COLUMN avatar_at TEXT');
 }
 
@@ -153,15 +155,15 @@ export function upsertSpot(db, s) {
   const r = db
     .prepare(
       `INSERT INTO spots (kind, title, city, venue, creators, tags, description, starts_at, ends_at, opened_at,
-                          price, url, popularity, source, external_id, is_demo, added_by, lat, lng)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+                          price, url, popularity, source, external_id, is_demo, added_by, lat, lng, image)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     )
     .run(
       s.kind, s.title, s.city ?? null, s.venue ?? null,
       JSON.stringify(s.creators ?? []), JSON.stringify(s.tags ?? []), s.description ?? null,
       s.starts_at ?? null, s.ends_at ?? null, s.opened_at ?? null, s.price ?? null, s.url ?? null,
       s.popularity ?? 0.5, s.source ?? 'local', s.external_id != null ? String(s.external_id) : null, s.is_demo ? 1 : 0,
-      s.added_by ?? null, s.lat ?? null, s.lng ?? null
+      s.added_by ?? null, s.lat ?? null, s.lng ?? null, s.image ?? null
     );
   return hydrateSpot(db.prepare('SELECT * FROM spots WHERE id = ?').get(r.lastInsertRowid));
 }

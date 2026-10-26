@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { api } from '../api.js';
 import Icon from '../components/Icon.jsx';
+import Mascot from '../components/Mascot.jsx';
 import { Empty, Loading, PageHead, useApi } from '../components/ui.jsx';
 
 // Friends are mutual. When a friend saves a spot, it shows up in your Next
 // with their name on it, and you can see how close your tastes are.
+
+const FACE = ['sky', 'mint', 'lilac', 'peach', 'butter', 'pink'];
 export default function Friends() {
   const state = useApi('/friends');
   const [username, setUsername] = useState('');
@@ -55,10 +58,19 @@ export default function Friends() {
             )}
             <h2>Taste twins, closest first</h2>
             {friends.length ? (
-              <ul className="people">
-                {friends.map((u) => (
+              <ul className="people friends">
+                {friends.map((u, i) => (
                   <li key={u.id}>
-                    <span><b>{u.display_name}</b> <span className="muted">@{u.username}</span></span>
+                    <span className="friend-face">
+                      <Mascot size={54} color={FACE[i % FACE.length]} prop={u.emblem || undefined} tear={false} />
+                      {u.avatar_url && <img src={u.avatar_url} alt="" />}
+                    </span>
+                    <span className="friend-who">
+                      <span><b>{u.display_name}</b> <span className="muted">@{u.username}</span></span>
+                      {u.title
+                        ? <span className="friend-title">{u.title}{u.tagline && <span className="muted">, {u.tagline}</span>}</span>
+                        : <span className="muted small">Still finding their taste</span>}
+                    </span>
                     <span className="taste-match" style={{ '--p': u.match }}>{u.match}% taste match</span>
                   </li>
                 ))}

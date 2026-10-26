@@ -58,3 +58,22 @@ test('planOccasion: picking a theme, unknown occasion, and no clusters at all', 
   assert.ok(empty.theme.name.endsWith('brunch'));
   assert.deepEqual(moodboard([], ['jazz']), []);
 });
+
+test('planOccasion: the whole evening (running order, scene, games, guests and a countdown)', () => {
+  const clusters = findPatterns(SAVES, { minSaves: 2 });
+  const maya = { id: 7, name: 'Maya', title: 'The Café Wanderer', profile: new Map([['pastry', 1], ['coffee', 0.8]]) };
+  const plan = planOccasion({ type: 'dinner', clusters, profile: tasteProfile(SAVES), saves: SAVES, guests: [maya] });
+  assert.ok(plan.run.length >= 4 && plan.run.every((r) => r.time && r.what));
+  assert.ok(plan.run.some((r) => r.what === plan.food.main[0].name), 'the running order uses the plan’s own picks');
+  assert.deepEqual(plan.scene.map((x) => x.area), ['light', 'scent', 'table', 'sound']);
+  assert.ok(plan.scene.every((x) => x.name));
+  assert.equal(plan.games.length, 3);
+  assert.equal(plan.guests[0].name, 'Maya');
+  assert.equal(plan.guests[0].sample, false);
+  assert.match(plan.guests[0].bring, /pastr|dessert/, 'guests bring something that suits their taste');
+  assert.ok(plan.guests.slice(1).every((g) => g.sample), 'sample guests fill the rest, marked');
+  assert.equal(new Set(plan.guests.map((g) => g.bring)).size, plan.guests.length, 'nobody brings the same thing');
+  assert.ok(plan.prep.length >= 4 && plan.prep.every((p) => p.tasks.length));
+  assert.equal(plan.numbers.find((n) => n.label === 'records').n, plan.playlist.fromSaves.length + plan.playlist.more.length);
+  assert.equal(planOccasion({ type: 'date', clusters, profile: new Map(), saves: SAVES }).guests.length, 1);
+});

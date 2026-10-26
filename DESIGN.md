@@ -141,6 +141,21 @@ character (`tasteCharacter`), never as a chart:
   blocks, bigger blocks for bigger loves, coloured by facet, tied to you with
   red string, with dashed threads between tastes that go together. Tap a
   word to light up what it's tied to. On phones the words wrap below you.
+- **Your world, in one picture** (`server/collage.js`): the thing people
+  ask chatbots for, "draw what's in my bag / my room from what you know
+  about me". Each object (headphones, a paperback, a film camera, a
+  turntable, candles, a coat…) is called up by tastes and scored by how
+  strong they are; objects that can be, are labelled from a real save of the
+  right kind ("The Secret History", "a croissant from Laminated", "Pink Moon
+  on the turntable"), each save used once and never an @handle. The bag is a
+  flat-lay on a cutting mat around an open tote; the room is a drawn scene
+  (shelf, sideboard, rug, a window onto your home city, night if you're a
+  night owl) with numbered things and a handwritten key. A line reflects it
+  back: *Never leaves the house without a book, a coffee and something from
+  a bakery.*
+- **Friends' titles:** friends, your taste twin and Host guests all show
+  their own Tastemate title and character ("Maya · The Natural-Wine
+  Wanderer").
 - **Profile photo:** each person has their character and, if they like, a
   photo, cropped and shrunk to 320px in the browser and shown as a taped
   polaroid on the character card and in the top bar.
@@ -164,8 +179,10 @@ Wes Anderson colours meet Pop Mart toys, on paper white, with the idea that
   with the same blocks. Side colours (teal, coral, violet) are validated as
   a set for colour-blind separation on both themes.
 - **Objects for things:** events are old movie tickets (ADMIT ONE, a stub
-  with the date, a barcode and a serial number), places are polaroids,
-  products have price tags, music is vinyl that spins on hover, and the Host
+  with the date, a barcode and a serial number), places and products are
+  polaroids of a real photo (from the feed; sample spots use stock photos)
+  with their taste icon stuck on as a label, falling back to the
+  illustration when there's no photo; products have price tags, music is vinyl that spins on hover, and the Host
   moodboard is a cork board of pinned polaroids tied with red string.
 - **Character art:** the Tastemate mascot, a round big-eyed Crybaby-ish
   character with blush cheeks and a single tear, holding a sticker of your
@@ -224,7 +241,18 @@ moodboard is the user's own saves that carry the theme, alternating kinds,
 pinned up as a collage. **Throw it at:** the place in the chosen city that
 best fits the theme ("throw a Moody jazz supper at the candlelit wine bar").
 **Your style of the night:** the dress line and the theme's colours to
-wear.
+wear. The rest of the evening is built from the same picks:
+
+- **The night, hour by hour:** a running order per occasion (doors, snacks,
+  main, a game, sweet, last record), filled with the chosen cocktail,
+  dishes, wines, game and records.
+- **Who's coming:** friends as guests, each with their title and something
+  to bring scored against their own taste (each thing once). Until there
+  are enough friends, marked sample guests fill the list.
+- **Set the scene** (light, scent, table, sound) and **Break the ice**
+  (three games), from hand-written lists tagged like everything else.
+- **The countdown** (two days before to ten minutes before) and **the night
+  in numbers** (people, bottles, records, hours).
 
 ## 6. Data model
 
@@ -238,7 +266,7 @@ saves(id, user_id, kind[song|place|look|product|art|food|event|other], title, cr
       UNIQUE(user_id, source, external_key)        -- re-imports are idempotent
 spots(id, kind[event|place|product], title, city, venue, creators[], tags[], description,
       starts_at, ends_at, opened_at, price, url, popularity 0..1, source, external_id,
-      lat?, lng?, is_demo, added_by?)
+      lat?, lng?, image?, is_demo, added_by?)
 spot_dismissals(user_id, spot_id)
 creator_facts(name, facts?, fetched_at)            -- MusicBrainz answers, null = no match
 ```

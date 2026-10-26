@@ -1,4 +1,5 @@
 import { HttpError, ah, intParam } from '../http.js';
+import { avatarUrl } from './profile.js';
 import { requireUser } from '../auth.js';
 import { friendIds, hydrateSave, hydrateSpot, tx, upsertSpot } from '../db.js';
 import { parseImport } from '../importers.js';
@@ -7,6 +8,7 @@ import { connectSaves, cosine, findPatterns, interpret, pairSpots, perfectDay, r
 import { loadCreatorCache } from '../enrich.js';
 import { parsePost } from '../posts.js';
 import { OCCASIONS, planOccasion } from '../occasions.js';
+import { tasteCollage } from '../collage.js';
 
 const IMPORT_SOURCES = ['spotify', 'instagram', 'google_maps', 'pinterest'];
 const PER_KIND = { event: 12, place: 12, product: 8 };
@@ -121,18 +123,23 @@ export default function savesRoutes(r, { db, venueFeed, enricher }) {
     // Your taste twin: the friend whose saves read most like yours, and what you share.
     let twin = null;
     for (const id of friendIds(db, me)) {
-      const theirs = tasteProfile(interpret(getSaves(id), { cache }));
+      const theirSaves = interpret(getSaves(id), { cache });
+      const theirs = tasteProfile(theirSaves);
       const match = toPercent(Math.max(0, cosine(profile, theirs)));
       if (!twin || match > twin.match) {
         const top = (p) => new Set([...p.entries()].filter(([k, v]) => v > 0 && !k.startsWith('creator:')).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k]) => k));
         const mine = top(profile);
         const u = db.prepare('SELECT username, display_name FROM users WHERE id = ?').get(id);
-        twin = { ...u, match, shared: [...top(theirs)].filter((t) => mine.has(t)).slice(0, 3) };
+        const c = tasteCharacter(theirSaves, findPatterns(theirSaves), theirs);
+        twin = { ...u, match, title: c?.name ?? null, emblem: c?.key ?? null, avatar_url: avatarUrl(db, id), shared: [...top(theirs)].filter((t) => mine.has(t)).slice(0, 3) };
       }
     }
+    const character = tasteCharacter(saves, clusters, profile);
+    const owl = character?.dials.find((x) => x.right === 'Night owl')?.value ?? 0.5;
     res.json({
-      character: tasteCharacter(saves, clusters, profile),
+      character,
       board: tasteBoard(saves, clusters, profile),
+      collage: tasteCollage(saves, profile, { city, nightOwl: owl }),
       day,
       city,
       twin,
@@ -242,6 +249,7 @@ export default function savesRoutes(r, { db, venueFeed, enricher }) {
       ends_at: ISO_DATE.test(b.ends_at) ? b.ends_at : null,
       price: b.price ? String(b.price).slice(0, 40) : null,
       url,
+      image: cleanUrl(b.image),
       popularity: 0.2,
       source: 'post',
       external_id: `${req.user.id}:${url || `${title}|${starts}|${city}`}`,
@@ -282,8 +290,16 @@ export default function savesRoutes(r, { db, venueFeed, enricher }) {
     const shop = here.filter((x) => x.kind === 'product' || x.tags.includes('wine bar') || x.tags.includes('pastry'));
     const venues = here.filter((x) => x.kind === 'place' && x.city);
     const theme = req.query.theme != null && req.query.theme !== '' ? Number(req.query.theme) : null;
+    // Friends as guests, each with their own taste.
+    const guests = friendIds(db, me).map((id) => {
+      const theirs = readSaves(id);
+      const p = tasteProfile(theirs);
+      const c = tasteCharacter(theirs, findPatterns(theirs), p);
+      const u = db.prepare('SELECT display_name FROM users WHERE id = ?').get(id);
+      return { id, name: u.display_name, title: c?.name, emblem: c?.key, avatar_url: avatarUrl(db, id), profile: p };
+    });
     res.json({
-      ...planOccasion({ type: OCCASIONS[req.query.type] ? req.query.type : 'dinner', clusters: findPatterns(saves), theme, profile, saves, shop, venues }),
+      ...planOccasion({ type: OCCASIONS[req.query.type] ? req.query.type : 'dinner', clusters: findPatterns(saves), theme, profile, saves, shop, venues, guests }),
       city,
       cities: known,
     });

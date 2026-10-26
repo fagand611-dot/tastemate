@@ -12,13 +12,17 @@ export function seedSpots(db) {
   const rows = demoSpots();
   let added = 0;
   tx(db, () => {
-    const has = db.prepare('SELECT id, lat FROM spots WHERE source = ? AND external_id = ?');
+    const has = db.prepare('SELECT id, lat, image FROM spots WHERE source = ? AND external_id = ?');
     const place = db.prepare('UPDATE spots SET lat = ?, lng = ? WHERE id = ?');
+    const photo = db.prepare('UPDATE spots SET image = ? WHERE id = ?');
     for (const s of rows) {
       const existing = has.get(s.source, s.external_id);
       if (!existing) (upsertSpot(db, s), added++);
-      // Older databases: fill in coordinates added since.
-      else if (existing.lat == null && s.lat != null) place.run(s.lat, s.lng, existing.id);
+      // Older databases: fill in coordinates and photos added since.
+      else {
+        if (existing.lat == null && s.lat != null) place.run(s.lat, s.lng, existing.id);
+        if (existing.image == null && s.image) photo.run(s.image, existing.id);
+      }
     }
   });
   return added;

@@ -140,6 +140,71 @@ export function themeVector(cluster, occasion, profile) {
   return v;
 }
 
+// Setting the scene: [name, area, tags, note]
+export const SCENE = [
+  ['Candles only, at three heights', 'light', ['moody', 'intimate', 'romantic', 'dark academia', 'vintage'], 'Turn the big light off before anyone arrives.'],
+  ['Warm lamps and fairy lights', 'light', ['cozy', 'chill', 'warm', 'folk'], 'Low and golden, nothing overhead.'],
+  ['Coloured bulbs and a disco ball', 'light', ['house', 'lively', 'high-energy', 'techno'], 'One red, one blue; let the room go pink.'],
+  ['Daylight and white linen', 'light', ['minimal', 'pastry', 'coffee', 'architecture'], 'Open the curtains, clear the surfaces.'],
+  ['Fig leaf and woodsmoke', 'scent', ['moody', 'dark academia', 'cozy', 'books'], 'One candle, lit an hour before.'],
+  ['Fresh coffee and orange peel', 'scent', ['coffee', 'pastry', 'uplifting'], 'Brew a pot as people arrive.'],
+  ['Jasmine and lime', 'scent', ['thai', 'street food', 'lively', 'outdoors'], 'Cut limes in a bowl by the door.'],
+  ['Cedar and old paper', 'scent', ['cerebral', 'vinyl', 'jazz', 'vintage'], 'Records out of their sleeves do half the work.'],
+  ['One long table, mismatched chairs', 'table', ['food', 'intimate', 'wine bar', 'craft'], 'Everyone close enough to pass the bread.'],
+  ['Floor cushions round a low table', 'table', ['chill', 'cozy', 'thai', 'street food'], 'Shoes off, food in the middle.'],
+  ['Standing room and a big bowl of ice', 'table', ['lively', 'house', 'high-energy'], 'Clear the sofa against the wall.'],
+  ['Linen cloth, stacked books as risers', 'table', ['dark academia', 'books', 'vintage', 'cerebral'], 'Old hardbacks under the cheese board.'],
+  ['Records on, sleeves on display', 'sound', ['jazz', 'vinyl', 'soul', 'folk'], 'Flip sides between courses.'],
+  ['A loud playlist after the main', 'sound', ['house', 'lively', 'high-energy', 'techno', 'electronic'], 'Quiet for dinner, then turn it up.'],
+  ['Strings low under conversation', 'sound', ['classical', 'romantic', 'atmospheric', 'moody'], 'You should just about hear it.'],
+  ['Soft and slow, mostly acoustic', 'sound', ['chill', 'folk', 'cozy', 'emotional'], 'Nothing with a drop.'],
+];
+
+// Games and ice-breakers: [name, tags, note]
+export const GAMES = [
+  ['Blind-taste two bottles', ['wine bar', 'craft', 'cerebral'], 'Hide the labels; guess the grape, the country, the price.'],
+  ['Everyone brings one record', ['jazz', 'vinyl', 'soul', 'folk', 'live music'], 'Play them in turn; the owner says why.'],
+  ['Desert-island books', ['books', 'dark academia', 'cerebral'], 'Three books each; the table votes one off.'],
+  ['Name that film', ['film', 'cinema', 'atmospheric'], 'One still on a phone, ten seconds to guess.'],
+  ['Pass the croissant', ['pastry', 'coffee', 'chill'], 'Whoever holds it answers: best thing you ate this year?'],
+  ['Dress-code reveal', ['tailoring', 'vintage', 'dark academia', 'lively'], 'Everyone explains one thing they’re wearing.'],
+  ['Two truths and a lie, candlelit', ['moody', 'intimate', 'romantic'], 'Blow out a candle when you’re caught.'],
+  ['Dance-off between courses', ['house', 'lively', 'high-energy', 'techno'], 'Thirty seconds each. Winner picks the next song.'],
+  ['Street-food bingo', ['thai', 'street food', 'food'], 'Cards with dishes; first to taste a full row wins.'],
+  ['Draw your neighbour', ['art', 'craft', 'minimal', 'gallery'], 'Paper and one pen each, two minutes.'],
+];
+
+// What a guest could bring, scored against their taste: [thing, tags]
+const BRING = [
+  ['a bottle of something orange', ['wine bar', 'craft', 'intimate']],
+  ['a record you love', ['jazz', 'vinyl', 'soul', 'folk']],
+  ['pastries from their favourite bakery', ['pastry', 'coffee']],
+  ['dessert', ['pastry', 'romantic', 'cozy']],
+  ['the playlist after midnight', ['house', 'techno', 'lively', 'high-energy', 'electronic']],
+  ['flowers for the table', ['minimal', 'romantic', 'art']],
+  ['a book to swap', ['books', 'dark academia', 'cerebral']],
+  ['ice and limes', ['cocktails', 'lively', 'thai']],
+  ['a cheese they’d defend', ['food', 'wine bar', 'moody']],
+  ['their camera', ['photography', 'art', 'vintage']],
+];
+
+// Sample guests, so the guest list can be seen before friends join.
+const SAMPLE_GUESTS = [
+  { name: 'Ana', title: 'The Café Wanderer', tags: ['coffee', 'pastry', 'books'] },
+  { name: 'Theo', title: 'The Dance-Floor Romantic', tags: ['house', 'lively', 'cocktails'] },
+  { name: 'Priya', title: 'The Gallery Ghost', tags: ['art', 'minimal', 'photography'] },
+  { name: 'Finn', title: 'The Fireside Storyteller', tags: ['folk', 'cozy', 'books'] },
+];
+
+// When things happen, per occasion: [time, what] (filled in from the plan).
+const RUN = {
+  dinner: [['7:30', 'arrive'], ['7:45', 'snacks'], ['8:30', 'main'], ['9:45', 'game'], ['10:15', 'sweet'], ['11:00', 'late']],
+  party: [['8:00', 'arrive'], ['9:00', 'snacks'], ['10:00', 'game'], ['11:00', 'late'], ['12:30', 'sweet']],
+  date: [['7:30', 'arrive'], ['8:00', 'main'], ['9:15', 'sweet'], ['10:00', 'late']],
+  birthday: [['7:00', 'arrive'], ['7:30', 'snacks'], ['8:30', 'main'], ['9:30', 'sweet'], ['10:00', 'game'], ['11:00', 'late']],
+  brunch: [['11:00', 'arrive'], ['11:30', 'sweet'], ['12:15', 'main'], ['1:30', 'game'], ['2:30', 'late']],
+};
+
 function pick(list, vec, n, theme) {
   return list
     .map(([name, kind, tags, note]) => {
@@ -238,7 +303,7 @@ export function moodboard(saves, theme, n = 9) {
  * @param {Array}  [ctx.shop]    spots (products/places) near you, already filtered by city
  * @param {Array}  [ctx.venues]  places in the city, for "throw it here"
  */
-export function planOccasion({ type, clusters, theme, profile, saves, shop = [], venues = [] }) {
+export function planOccasion({ type, clusters, theme, profile, saves, shop = [], venues = [], guests = [] }) {
   const occasion = OCCASIONS[type] || OCCASIONS.dinner;
   // Default: the cluster that best fits the occasion's leaning.
   const fit = (c) => c.tags.reduce((s, t) => s + (occasion.bias[t] || 0), 0) + c.count * 0.05;
@@ -277,17 +342,92 @@ export function planOccasion({ type, clusters, theme, profile, saves, shop = [],
     .filter((x) => x.score > 0.05)
     .sort((a, b) => b.score - a.score)[0] || null;
 
+  const drinkPicks = { wine: drinks('wine', 3), cocktails: drinks('cocktail', 2), zero: drinks('zero', 1) };
+  const foodPicks = { snacks: food('snack', 2), main: food('main', 1), sweet: food('sweet', 1) };
+  const records = [...songs, ...more];
+  const scene = ['light', 'scent', 'table', 'sound'].map((area) => ({ area, ...pick(SCENE.filter((x) => x[1] === area), vec, 1, themeTags)[0] }));
+  const games = pick(GAMES.map(([g, tags, note]) => [g, 'game', tags, note]), vec, 3, themeTags);
+  const party = guestList(guests, vec, occasion);
+
+  // The night, hour by hour, using the plan's own picks.
+  const say = {
+    arrive: [`Doors, and ${drinkPicks.cocktails[0]?.name || drinkPicks.wine[0]?.name || 'a drink'} in hand`, records[0] ? `${records[0].title} on the turntable` : 'First record on'],
+    snacks: [foodPicks.snacks.map((x) => x.name).join(' · ') || 'Something to pick at', drinkPicks.wine[0] ? `Open the ${drinkPicks.wine[0].name}` : ''],
+    main: [foodPicks.main[0]?.name || 'Dinner', drinkPicks.wine[1] ? `Pour the ${drinkPicks.wine[1].name}` : ''],
+    game: [games[0]?.name || 'A game', games[0]?.note || ''],
+    sweet: [foodPicks.sweet[0]?.name || 'Something sweet', drinkPicks.wine[2] ? `With ${drinkPicks.wine[2].name}` : ''],
+    late: [records[records.length - 1] ? `Last record: ${records[records.length - 1].title}` : 'Last song', 'Lights lower, doors at whenever'],
+  };
+  const run = (RUN[type] || RUN.dinner).map(([time, k]) => ({ time, step: k, what: say[k][0], detail: say[k][1] }));
+
+  // The countdown: what to do when, so the night runs itself.
+  const prep = [
+    { when: 'Two days before', tasks: [`Send the invite`, party.guests.length ? `Ask ${party.guests.slice(0, 2).map((g) => `${g.name} for ${g.bring}`).join(', ')}` : 'Confirm who’s coming'] },
+    { when: 'The day before', tasks: [`Buy the ${drinkPicks.wine.map((x) => x.name.split(' (')[0]).slice(0, 2).join(' and ')}`, `Shop for the ${foodPicks.main[0]?.name.toLowerCase() || 'main'}`] },
+    { when: 'That morning', tasks: [foodPicks.sweet[0] ? `Make the ${foodPicks.sweet[0].name.toLowerCase()}` : 'Make dessert', `Find ${scene[0].name?.toLowerCase() || 'candles'}`] },
+    { when: 'An hour before', tasks: ['Chill the whites, open the reds', `Set the table: ${scene[2].name?.toLowerCase() || 'plates and glasses'}`, scene[1].note || 'Light a candle'] },
+    { when: 'Ten minutes before', tasks: [records[0] ? `Put on ${records[0].title}` : 'Music on', 'Big light off'] },
+  ];
+  const count = Math.max(party.guests.length + 1, occasion === OCCASIONS.date ? 2 : 6);
+  const numbers = [
+    { n: count, label: occasion === OCCASIONS.date ? 'of you' : 'people' },
+    { n: Math.ceil(count / 2) + 1, label: 'bottles' },
+    { n: records.length, label: 'records' },
+    { n: run.length > 1 ? Math.max(2, Math.round(hours(run[0].time, run[run.length - 1].time))) : 3, label: 'hours' },
+  ];
+
   return {
     occasion: { type: OCCASIONS[type] ? type : 'dinner', label: occasion.label },
+    run,
+    scene,
+    games,
+    guests: party.guests,
+    prep,
+    numbers,
     venue: venue && { spot: venue.spot, because: venue.because },
     occasions: Object.entries(OCCASIONS).map(([k, o]) => ({ type: k, label: o.label })),
     themes: order.map((i) => ({ index: i, name: themeName(clusters[i].tags, occasion), tags: clusters[i].tags })),
     theme: { index: idx, name, tags: themeTags, palette: palette(cluster ? cluster.tags : themeTags), from: cluster ? cluster.count + cluster.maybe : 0 },
-    drinks: { wine: drinks('wine', 3), cocktails: drinks('cocktail', 2), zero: drinks('zero', 1) },
-    food: { snacks: food('snack', 2), main: food('main', 1), sweet: food('sweet', 1) },
+    drinks: drinkPicks,
+    food: foodPicks,
     playlist: { fromSaves: songs, more },
     invite: inviteStyle(themeTags, occasion, name, saves.filter((s) => s.kind === 'look')),
     moodboard: moodboard(saves, themeTags),
     shop: shopping,
+  };
+}
+
+/** Hours between two "7:30"-style times on the clock, past midnight if needed. */
+function hours(a, b) {
+  const h = (t) => {
+    const [x, m] = t.split(':').map(Number);
+    return (x < 7 ? x + 12 : x) + m / 60;
+  };
+  let d = h(b) - h(a);
+  if (d < 0) d += 12;
+  return d + 1;
+}
+
+/**
+ * Who's coming: each guest with their Tastemate title, how well they fit the
+ * theme, and what to ask them to bring (from their taste, each thing once).
+ * Friends first; sample guests (marked) fill the rest of the list.
+ */
+export function guestList(guests, vec, occasion) {
+  const want = occasion === OCCASIONS.date ? 1 : 5;
+  const people = [
+    ...guests,
+    ...SAMPLE_GUESTS.filter((g) => !guests.some((x) => x.name === g.name)).map((g) => ({ ...g, profile: new Map(g.tags.map((t) => [t, 1])), sample: true })),
+  ].slice(0, want);
+  const taken = new Set();
+  return {
+    guests: people.map((g) => {
+      const fit = cosine(vec, g.profile);
+      const bring = BRING.filter(([b]) => !taken.has(b))
+        .map(([b, tags]) => [b, tags.reduce((s, t) => s + (g.profile.get(t) || 0), 0) + 0.3 * tags.reduce((s, t) => s + (vec.get(t) || 0), 0)])
+        .sort((a, b) => b[1] - a[1])[0]?.[0] || 'themselves';
+      taken.add(bring);
+      return { id: g.id ?? null, name: g.name, title: g.title || null, emblem: g.emblem || null, avatar_url: g.avatar_url || null, fit: Math.round(Math.max(0, fit) * 100), bring, sample: !!g.sample };
+    }),
   };
 }

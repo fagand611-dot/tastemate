@@ -92,6 +92,36 @@ const COORDS = {
   'Kissa jazz evening': [35.6595, 139.7005],
 };
 
+// Stand-in photos for the sample places and things (Unsplash). A real feed
+// brings its own; without one the card falls back to its illustration.
+const PHOTOS = {
+  'Kissa-style listening café': '1501339847302-ac426a4a7cbb',
+  'Laminated: a croissant bakery': '1555507036-ab1f4038808a',
+  'Speakeasy behind a noodle shop': '1470337458703-46ad1756a187',
+  'Riverside contemporary gallery': '1460661419201-fd4cecdf8a8b',
+  'Brutalist bookshop and café': '1481627834876-b7833e8f5570',
+  'New pastry counter by a Parisian chef': '1509440159596-0249088772ff',
+  'Candlelit wine bar in a railway arch': '1510812431401-41d2bd2722f3',
+  'Members-free jazz basement': '1415201364774-f6f0bb35f28f',
+  'Specialty coffee and records': '1554118811-1e0d58224f24',
+  'Pastry and natural wine bistro': '1517248135467-4c7edcad34c4',
+  'Art-house café next to the gallery': '1509042239860-f550ce710b93',
+  'Tiny café on Meeting House Square': '1495474472287-4d71bcdd2085',
+  'Noodle shop with a queue at midnight': '1569718212165-3a8278d5f624',
+  'Charcoal wool overcoat, relaxed cut': '1591047139829-d91aecb6caea',
+  'Tweed blazer, vintage': '1507679799987-c73779587ccf',
+  'Linen camp shirt': '1596755094514-f87e34085b2c',
+  'Stoneware pour-over set': '1495474472287-4d71bcdd2085',
+  'Blue Note reissue on 180g vinyl': '1483412033650-1015ddeb83d1',
+  'Long wool trench in camel': '1544022613-e87ca75a784a',
+  'Natural and skin-contact wine, by the bottle': '1506377247377-2a5b3b417ebb',
+  'Pastry box to pre-order': '1555507036-ab1f4038808a',
+  'Old-world reds: Nebbiolo, Rhône Syrah': '1510812431401-41d2bd2722f3',
+  'Natural wine shop and bar': '1506377247377-2a5b3b417ebb',
+  'Beeswax dinner candles, set of 6': '1602874801006-e26c4c5b5e8a',
+};
+const photo = (id) => id && `https://images.unsplash.com/photo-${id}?w=640&q=70&auto=format&fit=crop`;
+
 /** Spot rows with dates relative to `now`. */
 export function demoSpots(now = new Date()) {
   const day = (offset) => new Date(now.getTime() + offset * 864e5).toISOString().slice(0, 10);
@@ -105,7 +135,7 @@ export function demoSpots(now = new Date()) {
   for (const [title, city, venue, tags, price, popularity, description] of PRODUCTS) {
     rows.push({ kind: 'product', title, city, venue, tags, price, popularity, description });
   }
-  return rows.map((r) => ({ ...r, lat: COORDS[r.title]?.[0], lng: COORDS[r.title]?.[1], source: 'seed', external_id: `${r.kind}:${r.title}`, is_demo: true }));
+  return rows.map((r) => ({ ...r, lat: COORDS[r.title]?.[0], lng: COORDS[r.title]?.[1], image: photo(PHOTOS[r.title]), source: 'seed', external_id: `${r.kind}:${r.title}`, is_demo: true }));
 }
 
 // Saves for the demo account, across four apps: [source, kind, title, creator, collection, city]

@@ -1,21 +1,31 @@
 import { HttpError, intParam } from '../http.js';
 import { requireUser } from '../auth.js';
 import { friendIds, hydrateSave } from '../db.js';
-import { cosine, interpret, tasteProfile, toPercent } from '../taste-graph.js';
+import { cosine, findPatterns, interpret, tasteCharacter, tasteProfile, toPercent } from '../taste-graph.js';
+import { avatarUrl } from './profile.js';
 import { loadCreatorCache } from '../enrich.js';
 
 // Friends are mutual and need an accept. They matter to the taste graph:
 // a spot a friend saved shows up in Next with "Maya saved it".
 export default function friendRoutes(r, { db }) {
-  const profileOf = (userId) => tasteProfile(interpret(db.prepare('SELECT * FROM saves WHERE user_id = ?').all(userId).map(hydrateSave), { cache: loadCreatorCache(db) }));
+  const readOf = (userId, cache) => {
+    const saves = interpret(db.prepare('SELECT * FROM saves WHERE user_id = ?').all(userId).map(hydrateSave), { cache });
+    return { saves, profile: tasteProfile(saves) };
+  };
 
   r.get('/friends', requireUser, (req, res) => {
     const me = req.user.id;
-    const mine = profileOf(me);
+    const cache = loadCreatorCache(db);
+    const mine = readOf(me, cache).profile;
     const ids = friendIds(db, me);
     const friends = ids
       .map((id) => db.prepare('SELECT id, username, display_name FROM users WHERE id = ?').get(id))
-      .map((u) => ({ ...u, match: toPercent(Math.max(0, cosine(mine, profileOf(u.id)))) }))
+      .map((u) => {
+        // Their Tastemate title ("The Late-Night Listener") under their name.
+        const { saves, profile } = readOf(u.id, cache);
+        const c = tasteCharacter(saves, findPatterns(saves), profile);
+        return { ...u, avatar_url: avatarUrl(db, u.id), title: c?.name ?? null, tagline: c?.tagline ?? null, emblem: c?.key ?? null, match: toPercent(Math.max(0, cosine(mine, profile))) };
+      })
       .sort((a, b) => b.match - a.match);
     const incoming = db
       .prepare(`SELECT u.id, u.username, u.display_name FROM friendships f JOIN users u ON u.id = f.requester_id WHERE f.addressee_id = ? AND f.status = 'pending'`)

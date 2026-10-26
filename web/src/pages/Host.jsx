@@ -4,8 +4,9 @@ import { qs } from '../api.js';
 import Icon, { SPOT_ICON } from '../components/Icon.jsx';
 import { useActions } from '../components/actions.jsx';
 import Mascot from '../components/Mascot.jsx';
+import SpotPhoto from '../components/SpotPhoto.jsx';
 import TasteArt, { hasArt } from '../components/TasteArt.jsx';
-import { PinBoard, Vinyl, wesFor } from '../components/Retro.jsx';
+import { PinBoard, Vinyl, WES, wesFor } from '../components/Retro.jsx';
 import { Empty, Loading, PageHead, useApi } from '../components/ui.jsx';
 
 // Host: "I'm having people over" → one theme from your taste clusters, and
@@ -74,9 +75,7 @@ function Plan({ d }) {
       <div className="venue-row">
         {d.venue && (
           <article className="venue-card" style={{ '--tape': wesFor(d.venue.spot.title) }}>
-            <span className="venue-photo" style={{ background: wesFor(d.venue.spot.title) }}>
-              <TasteArt name={d.venue.spot.tags.find(hasArt) || 'wine bar'} size={70} fill="#fff" />
-            </span>
+            <SpotPhoto spot={d.venue.spot} size={70} className="venue-photo" />
             <div>
               <p className="eyebrow">Throw it at</p>
               <h3>{d.venue.spot.title}</h3>
@@ -94,6 +93,10 @@ function Plan({ d }) {
           <p className="muted small">Wear these colours, light candles, and put {d.playlist.fromSaves[0]?.title || d.playlist.more[0]?.title || 'a record'} on first.</p>
         </article>
       </div>
+
+      <Numbers numbers={d.numbers} />
+      <RunOfShow run={d.run} palette={d.theme.palette} />
+      <Guests guests={d.guests} />
 
       <div className="host-grid">
         <Invite invite={d.invite} />
@@ -124,6 +127,10 @@ function Plan({ d }) {
           </ul>
         </section>
       </div>
+
+      <Scene scene={d.scene} />
+      <Games games={d.games} />
+      <Countdown prep={d.prep} />
 
       {d.moodboard.length > 0 && (
         <section className="shelf-section">
@@ -165,6 +172,140 @@ function Plan({ d }) {
         </section>
       )}
     </>
+  );
+}
+
+/** The night in numbers: a strip of big, friendly figures. */
+function Numbers({ numbers }) {
+  return (
+    <ul className="numbers" aria-label="The night in numbers">
+      {numbers.map((x, i) => (
+        <li key={x.label} style={{ '--c': WES[i % WES.length] }}><b>{x.n}</b><span>{x.label}</span></li>
+      ))}
+    </ul>
+  );
+}
+
+const STEP_ICON = { arrive: 'bell', snacks: 'sparkle', main: 'cup', game: 'star', sweet: 'heart', late: 'moon' };
+
+/** The night, hour by hour: a strip of clock stubs tied with string. */
+function RunOfShow({ run }) {
+  return (
+    <section className="shelf-section">
+      <div className="shelf-head"><div><h2><Icon name="clock" /> The night, hour by hour</h2><p className="shelf-sub">Built from everything below, so it runs itself.</p></div></div>
+      <ol className="run">
+        {run.map((r, i) => (
+          <li key={r.time + r.step} style={{ '--c': WES[i % WES.length], '--tilt': `${((i * 37) % 5) - 2}deg` }}>
+            <span className="run-time"><Icon name={STEP_ICON[r.step] || 'clock'} size={14} /> {r.time}</span>
+            <b>{r.what}</b>
+            {r.detail && <small>{r.detail}</small>}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+const GUEST_COLOR = ['sky', 'mint', 'lilac', 'peach', 'butter', 'pink'];
+
+/** Who's coming, as little characters, with their taste title and what to bring. */
+function Guests({ guests }) {
+  if (!guests.length) return null;
+  return (
+    <section className="shelf-section">
+      <div className="shelf-head">
+        <div><h2><Icon name="users" /> Who’s coming</h2><p className="shelf-sub">Everyone brings something that suits their taste.</p></div>
+        <Link to="/friends" className="btn btn-sm btn-outline">Add friends</Link>
+      </div>
+      <ul className="guests">
+        {guests.map((g, i) => (
+          <li key={g.name} className="guest">
+            <span className="guest-art">
+              <Mascot size={78} color={GUEST_COLOR[i % GUEST_COLOR.length]} prop={g.emblem || undefined} tear={false} />
+              {g.avatar_url && <img src={g.avatar_url} alt="" />}
+            </span>
+            <b>{g.name}{g.sample && <span className="badge demo">sample</span>}</b>
+            {g.title && <span className="guest-title">{g.title}</span>}
+            <span className="guest-bring"><Icon name="bag" size={13} /> brings {g.bring}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+const SCENE_ICON = { light: 'sun', scent: 'sparkle', table: 'cup', sound: 'music' };
+const SCENE_LABEL = { light: 'Light', scent: 'Scent', table: 'Table', sound: 'Sound' };
+
+/** Set the scene: light, scent, table and sound, one card each. */
+function Scene({ scene }) {
+  return (
+    <section className="shelf-section">
+      <div className="shelf-head"><h2><Icon name="sun" /> Set the scene</h2></div>
+      <div className="scene">
+        {scene.filter((x) => x.name).map((x, i) => (
+          <article key={x.area} className="scene-card" style={{ '--c': WES[(i + 2) % WES.length] }}>
+            <span className="scene-icon"><Icon name={SCENE_ICON[x.area]} size={20} /></span>
+            <p className="eyebrow">{SCENE_LABEL[x.area]}</p>
+            <h3>{x.name}</h3>
+            <p className="muted small">{x.note}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+const SUITS = ['♠', '♥', '♣', '♦'];
+
+/** Break the ice: games as a fanned hand of playing cards. */
+function Games({ games }) {
+  if (!games.length) return null;
+  return (
+    <section className="shelf-section">
+      <div className="shelf-head"><h2><Icon name="star" /> Break the ice</h2></div>
+      <div className="cards-hand">
+        {games.map((g, i) => (
+          <article key={g.name} className="play-card" style={{ '--tilt': `${(i - (games.length - 1) / 2) * 5}deg` }}>
+            <span className="suit">{SUITS[i % 4]}</span>
+            <h3>{g.name}</h3>
+            <p>{g.note}</p>
+            {g.because.length > 0 && <span className="because">for your {g.because.slice(0, 2).join(', ')}</span>}
+            <span className="suit flip">{SUITS[i % 4]}</span>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** The countdown: a to-do list on a notepad, ticked off as you go. */
+function Countdown({ prep }) {
+  const [done, setDone] = useState({});
+  return (
+    <section className="shelf-section">
+      <div className="shelf-head"><h2><Icon name="check" /> The countdown</h2></div>
+      <div className="notepad">
+        {prep.map((p) => (
+          <div key={p.when} className="notepad-block">
+            <span className="label">{p.when}</span>
+            <ul>
+              {p.tasks.filter(Boolean).map((t) => {
+                const k = `${p.when}|${t}`;
+                return (
+                  <li key={k}>
+                    <label className={done[k] ? 'done' : ''}>
+                      <input type="checkbox" checked={!!done[k]} onChange={() => setDone({ ...done, [k]: !done[k] })} />
+                      <span>{t}</span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

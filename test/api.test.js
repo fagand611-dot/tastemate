@@ -292,3 +292,30 @@ test('profile photo: upload, serve, replace and remove; only small images', asyn
   assert.equal((await me.del('/me/avatar')).body.avatar_url, null);
   assert.equal((await fetch(`${base}/users/${me.id}/avatar`)).status, 404);
 });
+
+test('friends show their Tastemate title; Host invites them; places carry photos', async () => {
+  const me = await signup('titled');
+  const pal = await signup('titled_pal');
+  await befriend(me, pal, 'titled_pal');
+  await pal.post('/saves/import', { source: 'spotify', text: 'Miles Davis - So What\nBill Evans - Peace Piece\nJohn Coltrane - Naima' });
+  await pal.post('/saves', { title: 'Vinyl listening bar', city: 'Dublin' });
+  await pal.post('/saves', { title: 'Late night jazz bar', city: 'Dublin' });
+  await me.post('/saves', { title: 'Candlelit wine bar', city: 'Dublin' });
+  await me.post('/saves', { title: 'Late night jazz bar', city: 'Dublin' });
+  await me.post('/saves/import', { source: 'spotify', text: 'Miles Davis - Blue in Green\nChet Baker - Alone Together' });
+
+  const friend = (await me.get('/friends')).body.friends[0];
+  assert.equal(friend.username, 'titled_pal');
+  assert.match(friend.title, /^The /);
+  assert.equal((await me.get('/you')).body.twin.title, friend.title);
+
+  const plan = (await me.get('/occasion?type=dinner&city=Dublin')).body;
+  const guest = plan.guests.find((g) => g.name === 'titled_pal');
+  assert.equal(guest.title, friend.title);
+  assert.equal(guest.sample, false);
+
+  const next = (await me.get('/next?city=Dublin&window=2weeks')).body;
+  const all = Object.values(next.sections || {}).flat().concat(next.stretch || [], next.pairs?.map((p) => p.place) || []);
+  assert.ok(all.some((x) => x.spot.kind === 'place' && /^https:\/\//.test(x.spot.image)), 'sample places have photos');
+  assert.ok((await me.get('/you')).body.collage.bag.length > 0);
+});
