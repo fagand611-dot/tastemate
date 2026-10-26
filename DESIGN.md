@@ -208,11 +208,10 @@ running through it (threads, pins, crosswords):
   with their taste icon stuck on as a label, falling back to the
   illustration when there's no photo; products have price tags, music is vinyl that spins on hover, and the Host
   moodboard is a cork board of pinned polaroids tied with red string.
-- **Your title card:** You opens like a film's title card, not a cartoon:
-  a cream page in a fine maroon double frame, your photo in an arched gilt
-  frame (or your initial as a monogram), your Tastemate name in spaced
-  capitals, the tagline in italic serif, and your three signature tastes
-  ("CEREBRAL · JAZZ · MOODY").
+- **Your title card:** You opens with a soft glass card, not a cartoon:
+  your photo (or your initial) in a round frame on an orange sun, your
+  Tastemate name set light and large with the tagline in grey, and your
+  three signature tastes ("cerebral · jazz · moody").
 - **Character art:** the Tastemate mascot, a round big-eyed Crybaby-ish
   character with blush cheeks and a single tear, holding a sticker of your
   taste, on a candy-striped pastry-box card. It blinks and bobs.
