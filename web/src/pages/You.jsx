@@ -114,12 +114,12 @@ function Home({ d, saves }) {
   const c = d.character;
   const bag = d.collage?.bag.slice(0, 3) || [];
   const tiles = c ? [
-    { to: 'web', title: 'Your taste web', sub: 'and how you roll', color: '#f2b8c3', art: <MiniWeb web={d.web} /> },
-    { to: 'world', title: 'Your bag & room', sub: 'your world in one picture', color: '#e9b949', art: <span className="tile-things">{bag.map((x) => <Thing key={x.obj} obj={x.obj} size={44} />)}</span> },
-    { to: 'connected', title: 'Everything is connected', sub: `${d.board?.tastes.length || 0} tastes, tied together`, color: '#9cc9d9', art: <span className="tile-words">{d.board?.tastes.slice(0, 3).map((t) => <b key={t.tag}>{t.tag}</b>)}</span> },
-    { to: 'sides', title: 'The sides of you', sub: c.sides.map((sd) => sd.name).slice(0, 2).join(' · '), color: '#a9d6c6', art: <TasteArt name={c.sides[0]?.key || c.key} size={52} fill="#00877a" /> },
-    { to: 'day', title: d.city ? `A perfect day in ${d.city}` : 'Your perfect day', sub: d.day.length ? d.day.map((x) => x.slot).join(', ') : 'set your home city', color: '#f4c09c', art: <TasteArt name="Morning" size={52} fill="#c8372d" /> },
-    { to: 'stretch', title: 'Stretch your taste', sub: c.stretch.slice(0, 3).join(', ') || 'a little beyond your usual', color: '#c4b2dc', art: <TasteArt name={c.stretch[0] || 'explorer'} size={52} fill="#5d3f6a" /> },
+    { to: 'web', title: 'Your taste web', sub: 'and how you roll', color: '#f3e3d8', art: <MiniWeb web={d.web} /> },
+    { to: 'world', title: 'Your bag & room', sub: 'your world in one picture', color: '#ffb36b', art: <span className="tile-things">{bag.map((x) => <Thing key={x.obj} obj={x.obj} size={44} />)}</span> },
+    { to: 'connected', title: 'Everything is connected', sub: `${d.board?.tastes.length || 0} tastes, tied together`, color: '#e4e0dc', art: <span className="tile-words">{d.board?.tastes.slice(0, 3).map((t) => <b key={t.tag}>{t.tag}</b>)}</span> },
+    { to: 'sides', title: 'The sides of you', sub: c.sides.map((sd) => sd.name).slice(0, 2).join(' · '), color: '#e9e4d9', art: <TasteArt name={c.sides[0]?.key || c.key} size={52} fill="#8a8178" /> },
+    { to: 'day', title: d.city ? `A perfect day in ${d.city}` : 'Your perfect day', sub: d.day.length ? d.day.map((x) => x.slot).join(', ') : 'set your home city', color: '#f7d2b4', art: <TasteArt name="Morning" size={52} fill="#ff7a1a" /> },
+    { to: 'stretch', title: 'Stretch your taste', sub: c.stretch.slice(0, 3).join(', ') || 'a little beyond your usual', color: '#e2dcd6', art: <TasteArt name={c.stretch[0] || 'explorer'} size={52} fill="#5d3f6a" /> },
   ] : [];
   return (
     <div className="you home">
@@ -156,12 +156,12 @@ const webPoint = (i, n, v, r = WEB_R) => {
 
 /** A tiny web for the tile. */
 function MiniWeb({ web }) {
-  if (!web) return <TasteArt name="explorer" size={52} fill="#c8372d" />;
+  if (!web) return <TasteArt name="explorer" size={52} fill="#ff7a1a" />;
   const pts = web.map((a, i) => webPoint(i, web.length, Math.max(0.12, a.value), 26).join(',')).join(' ');
   return (
     <svg viewBox="-30 -30 60 60" width="60" height="60" aria-hidden>
-      {[1, 0.5].map((k) => <polygon key={k} points={web.map((_, i) => webPoint(i, web.length, k, 26).join(',')).join(' ')} fill="none" stroke="#2b1d22" strokeOpacity="0.25" />)}
-      <polygon points={pts} fill="#c8372d" fillOpacity="0.85" />
+      {[1, 0.5].map((k) => <polygon key={k} points={web.map((_, i) => webPoint(i, web.length, k, 26).join(',')).join(' ')} fill="none" stroke="#1d1b19" strokeOpacity="0.25" />)}
+      <polygon points={pts} fill="#ff7a1a" fillOpacity="0.85" />
     </svg>
   );
 }
@@ -464,8 +464,8 @@ function FacetChips({ facets = {}, creator }) {
 }
 
 const CONNECT_INFO = {
-  spotify: { icon: 'music', color: '#a9d6c6', what: 'Your liked songs and saved albums, kept up to date every day.' },
-  instagram: { icon: 'image', color: '#f2b8c3', what: 'Your own posts, for business and creator accounts. Instagram doesn’t share saved posts with any app, so bring those in from your download below.' },
+  spotify: { icon: 'music', color: '#e9e4d9', what: 'Your liked songs and saved albums, kept up to date every day.' },
+  instagram: { icon: 'image', color: '#f3e3d8', what: 'Your own posts, for business and creator accounts. Instagram doesn’t share saved posts with any app, so bring those in from your download below.' },
 };
 
 /** "2 hours ago" from SQLite's UTC "YYYY-MM-DD HH:MM:SS". */

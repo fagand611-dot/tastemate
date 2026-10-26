@@ -187,15 +187,21 @@ match as the stamp and a postmark from the city.
 
 ### Look and feel
 
-Wes Anderson sets with a Pop Mart character, on paper white, with the idea
-that *everything is connected* running through it (red string, pins,
-crosswords):
+Soft and grown up, like a calm lifestyle app: warm sand and bone, frosted
+glass, one glowing orange, and the idea that *everything is connected*
+running through it (threads, pins, crosswords):
 
-- **Palette:** flat Wes Anderson blocks with real contrast: lobby-boy red
-  (the accent), mustard, Mendl's pink, teal, powder blue and maroon, on
-  white, with aubergine-black ink; red string (`--thread`) for anything
-  that ties things together. Dark mode is navy with the same blocks. Side colours (teal, coral, violet) are validated as
-  a set for colour-blind separation on both themes.
+- **Palette:** a warm sand page (#efe9e3) with a soft orange glow off one
+  corner, frosted white glass cards, near-black ink (#1d1b19) with a grey
+  second voice, and one accent, orange (#ff7a1a), often as a sun-like orb
+  (behind your portrait, the envelope's wax seal). One dark card among the
+  tiles for contrast. Illustrations use the same warm neutrals and orange.
+  Dark mode is warm charcoal with the same orange.
+- **Type:** Inter, light and large for titles, in sentence case, with the
+  second half of a title in grey ("The Late-Night Listener / with a
+  deep-thinker side"). Invitations can still use a serif.
+- **Shape:** very round (24–36px corners), hairline borders, soft lifted
+  shadows; buttons are black pills (light pills in dark mode).
 - **Objects for things:** events are old movie tickets (ADMIT ONE, a stub
   with the date, a barcode and a serial number), places and products are
   polaroids of a real photo (from the feed; sample spots use stock photos)
@@ -210,14 +216,9 @@ crosswords):
 - **Character art:** the Tastemate mascot, a round big-eyed Crybaby-ish
   character with blush cheeks and a single tear, holding a sticker of your
   taste, on a candy-striped pastry-box card. It blinks and bobs.
-- **Type:** Jost (Futura-like) in spaced capitals for titles, labels and
-  buttons, the way Wes Anderson titles are set; Playfair Display italic for
-  the chic bits (taglines, titles of people, captions); DM Sans for text,
-  16px base.
-- **Interaction:** flat, outlined cards with no drop shadows, cards that
-  tilt on hover, stickers that wiggle, pages that float in, a floating tab
-  bar and an add button on phones. Everything respects
-  reduced-motion settings.
+- **Interaction:** cards that lift on hover, stickers that wiggle, pages
+  that float in, a floating tab bar and an add button on phones. Everything
+  respects reduced-motion settings.
 
 ## 5. Taste → action
 

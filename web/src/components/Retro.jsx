@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 // places, and a pin board that ties pinned things together with red string.
 
 // Flat Wes Anderson colour blocks, picked by name so each thing keeps its colour.
-export const WES = ['#f6b8c6', '#a9d3e8', '#f6d77a', '#bfe6dc', '#ffcdb8', '#cfc6f2'];
+export const WES = ['#f3e3d8', '#e4e0dc', '#f6dcc0', '#e9e4d9', '#f7d2b4', '#e2dcd6'];
 
 export function hash(s) {
   let h = 2166136261;
@@ -18,11 +18,11 @@ export function Vinyl({ title = '', size = 56, spinning = false }) {
   const label = wesFor(title);
   return (
     <svg className={`vinyl ${spinning ? 'spin' : ''}`} width={size} height={size} viewBox="0 0 64 64" aria-hidden>
-      <circle cx="32" cy="32" r="30" fill="#1f2433" />
+      <circle cx="32" cy="32" r="30" fill="#1d1b19" />
       {[25, 21, 17].map((r) => <circle key={r} cx="32" cy="32" r={r} fill="none" stroke="#3a4157" strokeWidth="1" />)}
       <path d="M12 22a22 22 0 0 1 10-10" stroke="rgba(255,255,255,0.35)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
       <circle cx="32" cy="32" r="11" fill={label} />
-      <circle cx="32" cy="32" r="2.2" fill="#1f2433" />
+      <circle cx="32" cy="32" r="2.2" fill="#1d1b19" />
     </svg>
   );
 }
@@ -30,7 +30,7 @@ export function Vinyl({ title = '', size = 56, spinning = false }) {
 /** A polaroid frame with a strip of washi tape on top. */
 export function Polaroid({ children, caption, tilt = 0, color, className = '' }) {
   return (
-    <figure className={`polaroid ${className}`} style={{ '--tilt': `${tilt}deg`, '--tape': color || '#f6d77a' }}>
+    <figure className={`polaroid ${className}`} style={{ '--tilt': `${tilt}deg`, '--tape': color || '#f6dcc0' }}>
       <div className="polaroid-photo">{children}</div>
       {caption && <figcaption>{caption}</figcaption>}
     </figure>

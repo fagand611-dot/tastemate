@@ -99,7 +99,7 @@ function Plan({ d }) {
       </div>
     ) },
     { key: 'records', label: `${records.length} records`, node: (
-      <div className="obj-record" style={{ '--sleeve': d.theme.palette[1] || '#c8372d' }}>
+      <div className="obj-record" style={{ '--sleeve': d.theme.palette[1] || '#ff7a1a' }}>
         <Vinyl title={records[0]?.title || ''} size={96} spinning={open} />
         <span className="sleeve"><b>{records[0]?.title}</b><small>{records[0]?.creator}</small></span>
       </div>
@@ -117,7 +117,7 @@ function Plan({ d }) {
       <div className="obj-card"><small>The running order</small>{d.run.slice(0, 4).map((r) => <span key={r.time}><b>{r.time}</b> {r.step}</span>)}</div>
     ) },
     { key: 'scene', label: 'Set the scene', node: (
-      <div className="obj-scene"><TasteArt name={d.theme.tags.find(hasArt) || 'moody'} size={64} fill="#6b1f2a" /><b>{d.scene[0]?.name}</b></div>
+      <div className="obj-scene"><TasteArt name={d.theme.tags.find(hasArt) || 'moody'} size={64} fill="#3a3633" /><b>{d.scene[0]?.name}</b></div>
     ) },
     d.games.length > 0 && { key: 'games', label: 'Break the ice', node: (
       <div className="obj-play"><span>♥</span><b>{d.games[0].name}</b><span className="flip">♥</span></div>
@@ -204,7 +204,7 @@ function Plan({ d }) {
 
   return (
     <>
-      <section className={`envelope-stage ${open ? 'open' : ''}`} style={{ '--env': d.theme.palette[d.theme.palette.length - 1] || '#f6ead2', '--flap': d.theme.palette[1] || '#c8372d' }}>
+      <section className={`envelope-stage ${open ? 'open' : ''}`}>
         <button className="envelope" onClick={() => setOpen(true)} aria-expanded={open} aria-label={open ? 'Envelope, open' : 'Open the envelope'}>
           <span className="env-back" />
           <span className="env-card" style={{ background: ink.bg, color: ink.ink }}>
@@ -246,7 +246,7 @@ function Plan({ d }) {
 /** The ticket for the night itself. */
 function Ticket({ d, when, where }) {
   return (
-    <div className="ticket big-ticket" style={{ '--tk': d.theme.palette[d.theme.palette.length - 1] || '#f2b8c3' }}>
+    <div className="ticket big-ticket" style={{ '--tk': d.theme.palette[d.theme.palette.length - 1] || '#f3e3d8' }}>
       <div className="ticket-main">
         <span className="ticket-kicker">Admit one · {d.occasion.label}</span>
         <h3>{d.theme.name}</h3>

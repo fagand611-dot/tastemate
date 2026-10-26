@@ -55,12 +55,12 @@ export async function inviteImage(invite, when, where) {
   let y = 760;
   ctx.textAlign = 'left';
   ctx.fillStyle = accent;
-  ctx.font = '600 30px Jost, Futura, sans-serif';
+  ctx.font = '600 30px Inter, system-ui, sans-serif';
   if ('letterSpacing' in ctx) ctx.letterSpacing = '6px';
   ctx.fillText((invite.line || '').toUpperCase(), left, y);
   if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
   ctx.fillStyle = ink;
-  ctx.font = invite.type === 'serif-italic' ? 'italic 500 92px "Playfair Display", Georgia, serif' : invite.type === 'display' ? '800 92px Jost, Futura, sans-serif' : '600 92px Jost, Futura, sans-serif';
+  ctx.font = invite.type === 'serif-italic' ? 'italic 500 92px "Playfair Display", Georgia, serif' : invite.type === 'display' ? '800 92px Inter, system-ui, sans-serif' : '600 92px Inter, system-ui, sans-serif';
   const words = invite.headline.split(/\s+/);
   let line = '';
   y += 110;
@@ -73,7 +73,7 @@ export async function inviteImage(invite, when, where) {
     } else line = next;
   }
   ctx.fillText(line, left, y);
-  ctx.font = '400 40px "DM Sans", system-ui, sans-serif';
+  ctx.font = '400 40px Inter, system-ui, sans-serif';
   y += 90;
   ctx.fillText(when || '', left, y);
   if (where) ctx.fillText(where, left, (y += 54));

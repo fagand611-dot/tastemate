@@ -7,11 +7,11 @@ import { saveCollage } from './snapshot.js';
 // and symmetrical, with a title card. Every object fits a 120×120 box.
 
 const P = {
-  pink: '#f2b8c3', rose: '#e88a9a', red: '#c8372d', mustard: '#e3a92a', yellow: '#f2cf5b', teal: '#00877a', tealDark: '#00665c',
-  sky: '#9cc9d9', navy: '#24324a', maroon: '#6b1f2a', cream: '#f6ead2', paper: '#fffaf0', plum: '#5d3f6a', ink: '#2b1d22',
-  peach: '#f4c09c', green: '#4f7f52', leaf: '#6f9e5f', camel: '#c08a52', brown: '#8a5a3b', grey: '#c9c3bd', silver: '#dcdad6',
+  pink: '#f3e3d8', rose: '#f0c6a8', red: '#ff7a1a', mustard: '#f39a4a', yellow: '#ffc98a', teal: '#8a8178', tealDark: '#6b635b',
+  sky: '#e4e0dc', navy: '#24324a', maroon: '#3a3633', cream: '#f1e9df', paper: '#faf7f3', plum: '#5d3f6a', ink: '#1d1b19',
+  peach: '#f7d2b4', green: '#4f7f52', leaf: '#6f9e5f', camel: '#c08a52', brown: '#8a5a3b', grey: '#c9c3bd', silver: '#dcdad6',
 };
-const CAPS = { fontFamily: 'Jost, Futura, sans-serif', fontWeight: 600, letterSpacing: '0.14em' };
+const CAPS = { fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 600, letterSpacing: '0.14em' };
 
 const OBJ = {
   tote: () => (

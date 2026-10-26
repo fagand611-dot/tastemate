@@ -4,9 +4,9 @@
 
 const W = 1080;
 const H = 1350;
-const MAROON = '#6b1f2a';
-const INK = '#2b1d22';
-const PAPER = '#fffaf0';
+const MAROON = '#3a3633';
+const INK = '#1d1b19';
+const PAPER = '#faf7f3';
 
 /** An on-screen SVG as an image the canvas can draw. */
 function svgImage(svg) {
@@ -41,7 +41,7 @@ function wrap(ctx, text, x, y, width, lineHeight, maxLines = 3) {
 }
 
 function titleCard(ctx, small, big, y) {
-  ctx.font = '600 44px Jost, Futura, sans-serif';
+  ctx.font = '600 44px Inter, system-ui, sans-serif';
   const bw = Math.max(420, ctx.measureText(big.toUpperCase()).width + big.length * 8 + 80);
   ctx.fillStyle = PAPER;
   ctx.fillRect((W - bw) / 2, y, bw, 120);
@@ -52,7 +52,7 @@ function titleCard(ctx, small, big, y) {
   ctx.textAlign = 'center';
   ctx.font = 'italic 500 28px "Playfair Display", Georgia, serif';
   ctx.fillText(small, W / 2, y + 46);
-  ctx.font = '600 40px Jost, Futura, sans-serif';
+  ctx.font = '600 40px Inter, system-ui, sans-serif';
   if ('letterSpacing' in ctx) ctx.letterSpacing = '8px';
   ctx.fillText(big.toUpperCase(), W / 2, y + 94);
   if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
@@ -63,7 +63,7 @@ function footer(ctx, reflection, title, reflectionY = H - 120) {
   ctx.fillStyle = INK;
   ctx.font = 'italic 500 30px "Playfair Display", Georgia, serif';
   if (reflection) wrap(ctx, reflection, W / 2, reflectionY, W - 160, 40, 2);
-  ctx.font = '600 20px Jost, Futura, sans-serif';
+  ctx.font = '600 20px Inter, system-ui, sans-serif';
   ctx.fillStyle = MAROON;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '5px';
   ctx.fillText(`TASTEMATE${title ? ` · ${title.toUpperCase()}` : ''}`, W / 2, H - 36);
@@ -71,7 +71,7 @@ function footer(ctx, reflection, title, reflectionY = H - 120) {
 }
 
 async function drawBag(ctx, root, { items, name, reflection, title }) {
-  ctx.fillStyle = '#f2b8c3';
+  ctx.fillStyle = '#f3e3d8';
   ctx.fillRect(0, 0, W, H);
   ctx.strokeStyle = MAROON;
   ctx.lineWidth = 4;
@@ -92,7 +92,7 @@ async function drawBag(ctx, root, { items, name, reflection, title }) {
     ctx.drawImage(things[i], cx + (cw - 150) / 2, cy, 150, 150);
     ctx.textAlign = 'center';
     ctx.fillStyle = MAROON;
-    ctx.font = '600 18px Jost, Futura, sans-serif';
+    ctx.font = '600 18px Inter, system-ui, sans-serif';
     ctx.fillText(`NO. ${i + 1}`, cx + cw / 2, cy + 180);
     ctx.fillStyle = INK;
     ctx.font = 'italic 500 24px "Playfair Display", Georgia, serif';
@@ -121,7 +121,7 @@ async function drawRoom(ctx, root, { reflection, title }) {
     ctx.fill();
     ctx.fillStyle = PAPER;
     ctx.textAlign = 'center';
-    ctx.font = '600 18px Jost, Futura, sans-serif';
+    ctx.font = '600 18px Inter, system-ui, sans-serif';
     ctx.fillText(String(i + 1), x + 16, yy - 3);
     ctx.textAlign = 'left';
     ctx.fillStyle = INK;

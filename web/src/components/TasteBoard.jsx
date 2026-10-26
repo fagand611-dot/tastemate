@@ -9,7 +9,7 @@ import { hash, threadPath } from './Retro.jsx';
 // "Everything is connected."
 
 export const FACET_COLOR = {
-  food: '#f6d77a', sound: '#a9d3e8', vibe: '#f6b8c6', place: '#bfe6dc', time: '#cfc6f2', price: '#ffcdb8', era: '#fbf1dc', thing: '#fbe89a',
+  food: '#f6dcc0', sound: '#e4e0dc', vibe: '#f3e3d8', place: '#e9e4d9', time: '#e2dcd6', price: '#f7d2b4', era: '#f3ece4', thing: '#f3e6cf',
 };
 const FACET_LABEL = { food: 'food', sound: 'sound', vibe: 'vibe', place: 'place', time: 'time', price: 'price', era: 'era', thing: 'things' };
 
