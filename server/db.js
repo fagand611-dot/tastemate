@@ -96,6 +96,33 @@ CREATE TABLE IF NOT EXISTS spot_dismissals (
   spot_id INTEGER NOT NULL REFERENCES spots(id) ON DELETE CASCADE,
   PRIMARY KEY (user_id, spot_id)
 );
+
+-- Apps a person has connected (Spotify, Instagram). Tokens are sealed with
+-- AES-GCM (server/secrets.js) and never leave the server.
+CREATE TABLE IF NOT EXISTS connections (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider TEXT NOT NULL,
+  account_id TEXT,
+  account_name TEXT,
+  access_token TEXT NOT NULL,
+  refresh_token TEXT,
+  expires_at INTEGER,            -- ms since epoch
+  scope TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  last_synced_at TEXT,
+  last_added INTEGER,
+  last_error TEXT,
+  PRIMARY KEY (user_id, provider)
+);
+
+-- A sign-in in progress: the state sent to the app and checked on the way back.
+CREATE TABLE IF NOT EXISTS oauth_states (
+  state TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider TEXT NOT NULL,
+  return_to TEXT,
+  created_at INTEGER NOT NULL    -- ms since epoch
+);
 `;
 
 export function openDb(file = process.env.DB_FILE || 'data/tastemate.db') {

@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import fs from 'node:fs';
@@ -11,8 +12,22 @@ import authRoutes from './routes/auth.js';
 import savesRoutes from './routes/saves.js';
 import friendRoutes from './routes/friends.js';
 import profileRoutes from './routes/profile.js';
+import connectRoutes from './routes/connect.js';
+import { createSpotify } from './providers/spotify.js';
+import { createInstagram } from './providers/instagram.js';
+import { createConnections } from './connect.js';
+import { createSealer, loadTokenKey } from './secrets.js';
 
-export function createApp({ db, venueFeed = createVenuePosts(), artistLookup = createArtistLookup() }) {
+export function createApp({
+  db,
+  venueFeed = createVenuePosts(),
+  artistLookup = createArtistLookup(),
+  // Apps people can connect; null where this server has no keys for one.
+  connectors = { spotify: createSpotify(), instagram: createInstagram() },
+  // Only needed (and only made) once there's an app to connect.
+  tokenKey = Object.values(connectors).some(Boolean) ? loadTokenKey() : null,
+  publicUrl = process.env.PUBLIC_URL,
+}) {
   const app = express();
   app.disable('x-powered-by');
   // Export files from other apps can be large; everything else stays small.
@@ -24,11 +39,15 @@ export function createApp({ db, venueFeed = createVenuePosts(), artistLookup = c
 
   const enricher = createEnricher(db, artistLookup);
   app.locals.enricher = enricher;
-  const ctx = { db, venueFeed, enricher };
+  const cities = () => db.prepare('SELECT DISTINCT city FROM spots WHERE city IS NOT NULL').all().map((x) => x.city);
+  const connections = createConnections({ db, connectors, sealer: createSealer(tokenKey || crypto.randomBytes(32)), enricher, cities });
+  app.locals.connections = connections;
+  const ctx = { db, venueFeed, enricher, connections, connectors, publicUrl };
   const api = express.Router();
   authRoutes(api, ctx);
   friendRoutes(api, ctx);
   profileRoutes(api, ctx);
+  connectRoutes(api, ctx);
   savesRoutes(api, ctx);
   api.use((_req, res) => res.status(404).json({ error: 'Not found' }));
   app.use('/api', api);

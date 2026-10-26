@@ -280,6 +280,34 @@ wear. The rest of the evening is built from the same picks:
 - **The countdown** (two days before to ten minutes before) and **the night
   in numbers** (people, bottles, records, hours).
 
+### Connected apps (`server/connect.js`, `server/providers/`)
+
+The best saves are the ones that keep coming without anyone doing anything,
+so Spotify and Instagram can be connected rather than only imported.
+
+- **Spotify** uses the Authorization Code flow (`user-library-read`,
+  `user-read-private`). A sync reads liked songs and saved albums (up to
+  2,000) and their artists' genres, which go into the save's collection
+  where the tagger reads them. Rows use the same keys as a `YourLibrary.json`
+  import, so connecting after importing doesn't double anything.
+- **Instagram** uses the Instagram API with Instagram Login
+  (`instagram_business_basic`): a code buys a short-lived token, traded for
+  a 60-day one that's refreshed in place. It reads the person's own posts
+  (professional accounts only); the caption's first line is the title, the
+  rest a note, cities found in it become the save's city. Saved posts aren't
+  available to any app, so they come from the data download, which can be
+  uploaded as the whole ZIP: the browser reads the archive's directory and
+  unpacks only the saves files (`web/src/components/unzip.js`).
+- **Flow:** `/api/connect/:app/start` records a random state (one use, ten
+  minutes) and redirects to the app; the callback checks it, trades the code,
+  stores the tokens sealed with AES-256-GCM (`server/secrets.js`, key from
+  `TOKEN_KEY` or `data/token.key`) and starts the first sync in the
+  background, so the person lands back on Tastemate at once and watches
+  saves arrive. Tokens are refreshed shortly before they lapse; if an app
+  withdraws access, the connection is marked "connect again" and skipped by
+  the daily re-sync until it is. Disconnecting deletes the tokens; saves
+  stay.
+
 ## 6. Data model
 
 ```
@@ -294,6 +322,9 @@ spots(id, kind[event|place|product], title, city, venue, creators[], tags[], des
       starts_at, ends_at, opened_at, price, url, popularity 0..1, source, external_id,
       lat?, lng?, image?, is_demo, added_by?)
 spot_dismissals(user_id, spot_id)
+connections(user_id, provider, account_id, account_name, access_token*, refresh_token*,
+      expires_at, scope, last_synced_at, last_added, last_error)   -- * sealed
+oauth_states(state, user_id, provider, return_to, created_at)     -- one use, 10 minutes
 creator_facts(name, facts?, fetched_at)            -- MusicBrainz answers, null = no match
 ```
 

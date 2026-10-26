@@ -1,12 +1,13 @@
 import { HttpError, ah, intParam } from '../http.js';
 import { avatarUrl } from './profile.js';
 import { requireUser } from '../auth.js';
-import { friendIds, hydrateSave, hydrateSpot, tx, upsertSpot } from '../db.js';
+import { friendIds, hydrateSave, hydrateSpot, upsertSpot } from '../db.js';
 import { parseImport } from '../importers.js';
 import { SAVE_KINDS, SAVE_SOURCES, autoTag, cleanTags, guessKind } from '../taxonomy.js';
 import { connectSaves, cosine, tasteWeb, findPatterns, interpret, pairSpots, perfectDay, rankSpots, tasteBoard, tasteCharacter, tasteProfile, toPercent } from '../taste-graph.js';
 import { loadCreatorCache } from '../enrich.js';
 import { parsePost } from '../posts.js';
+import { ingestRows } from '../ingest.js';
 import { OCCASIONS, planOccasion } from '../occasions.js';
 import { tasteCollage } from '../collage.js';
 
@@ -86,27 +87,7 @@ export default function savesRoutes(r, { db, venueFeed, enricher }) {
     const { source, text } = req.body || {};
     if (!IMPORT_SOURCES.includes(source)) throw new HttpError(400, 'Unknown source');
     const rows = parseImport(source, text, { cities: cities() });
-    const cache = loadCreatorCache(db);
-    let added = 0;
-    let untagged = 0;
-    tx(db, () => {
-      const ins = db.prepare(
-        `INSERT OR IGNORE INTO saves (user_id, kind, title, creator, source, collection, url, note, city, tags, external_key, saved_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`
-      );
-      for (const row of rows) {
-        const tags = cleanTags(autoTag(row.title, row.creator, row.collection, row.note, cache));
-        const kind = row.kind === 'other' ? guessKind(tags) : row.kind;
-        const r2 = ins.run(req.user.id, kind, row.title, row.creator ?? null, source, row.collection ?? null, row.url ?? null, row.note ?? null, row.city ?? null, JSON.stringify(tags), String(row.external_key).slice(0, 500), row.saved_at ?? null);
-        if (r2.changes) {
-          added++;
-          if (!tags.length) untagged++;
-        }
-      }
-    });
-    // Artists we don't know yet are looked up in the background; their saves fill in as answers arrive.
-    const lookingUp = enricher.queue(rows.filter((x) => x.kind === 'song' && x.creator).map((x) => x.creator));
-    res.json({ found: rows.length, added, skipped: rows.length - added, untagged, lookingUp });
+    res.json(ingestRows(db, req.user.id, source, rows, enricher));
   });
 
   // ----- You: your Tastemate character, your perfect day, your taste twin -----

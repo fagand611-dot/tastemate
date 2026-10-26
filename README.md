@@ -53,10 +53,17 @@ npm run build && npm start   # serves the API and the built app on :3001
 
 ### Configuration
 
+Settings come from the environment, or from a `.env` file in the project
+folder (copy `.env.example`).
+
 | Variable | Default | Purpose |
 |---|---|---|
 | `PORT` | `3001` | HTTP port |
 | `DB_FILE` | `data/tastemate.db` | SQLite file |
+| `PUBLIC_URL` | the address the request came to | Where people reach Tastemate; connect sign-ins come back to `PUBLIC_URL/api/connect/<app>/callback`. Set it in production |
+| `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` | *(unset)* | Turns on **Connect Spotify** |
+| `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET` | *(unset)* | Turns on **Connect Instagram** |
+| `TOKEN_KEY` | a key kept in `data/token.key` | 32-byte hex key that seals connected apps' tokens |
 | `IG_USER_ID` | *(unset)* | Your Instagram business account ID, for the venue feed |
 | `IG_ACCESS_TOKEN` | *(unset)* | A Meta Graph API token with `instagram_basic` |
 | `VENUE_ACCOUNTS` | *(unset)* | Venues to follow, e.g. `Dublin:workmansclub,Bangkok:studiolam` |
@@ -65,6 +72,48 @@ npm run build && npm start   # serves the API and the built app on :3001
 
 Without the three `IG_` / `VENUE_` variables the venue feed is off; pasting
 posts still works.
+
+### Connecting Spotify and Instagram
+
+People connect their apps from **You → Add saves**. Each app needs to know
+about Tastemate first:
+
+**Spotify**
+1. Go to the [Spotify developer dashboard](https://developer.spotify.com/dashboard)
+   → *Create app*, tick *Web API*.
+2. Add the redirect URI `PUBLIC_URL/api/connect/spotify/callback`. Locally
+   that's `http://127.0.0.1:5173/api/connect/spotify/callback`. Spotify
+   doesn't accept `localhost`, so open Tastemate at `http://127.0.0.1:5173`
+   too.
+3. Put the app's client ID and secret in `.env` as `SPOTIFY_CLIENT_ID` and
+   `SPOTIFY_CLIENT_SECRET`, and restart.
+4. New Spotify apps are in *development mode*: only people added under
+   *User Management* in the dashboard can connect. Opening it to everyone
+   needs Spotify's approval (an extended quota request).
+
+What comes in: liked songs and saved albums (up to 2,000), with their
+artists' genres, re-synced about once a day. Scopes: `user-library-read`,
+`user-read-private`.
+
+**Instagram**
+1. At [Meta for Developers](https://developers.facebook.com/apps) create an
+   app and add the **Instagram** product, *API setup with Instagram login*.
+2. Add `PUBLIC_URL/api/connect/instagram/callback` as a valid OAuth redirect
+   URI. Meta needs `https`, so for local testing use a tunnel (for example
+   `cloudflared` or `ngrok`) and set `PUBLIC_URL` to it.
+3. Put the Instagram app ID and secret (from the Instagram product's API
+   setup page) in `.env` as `INSTAGRAM_APP_ID` and `INSTAGRAM_APP_SECRET`.
+4. Until the app passes Meta's app review for `instagram_business_basic`,
+   only accounts added as Instagram testers can connect.
+
+What comes in: the person's **own posts** (captions, links, dates), and only
+for professional accounts (business or creator). Instagram doesn't let any
+app read someone's *saved* posts, so those come from the data download:
+people upload the whole ZIP Instagram sends them, and Tastemate finds
+`saved_collections.json` and `saved_posts.json` in it, in the browser.
+
+Tokens are sealed with AES-256-GCM before they're stored and never sent to
+the browser. Disconnecting deletes them; the saves already brought in stay.
 
 ## What's in it
 
@@ -89,10 +138,11 @@ posts still works.
     of a crossword of your tastes, tied together with red string;
   - **Your world, in one picture:** what's in your bag and what your room
     looks like, drawn from your saves and labelled with them;
-  - **Feed your Tastemate:** import the data export from each app (Spotify
-    `YourLibrary.json`, Instagram `saved_collections.json`, Google Takeout
-    `Saved Places.json` or list CSVs, pasted Pinterest pins) or add a save
-    by hand. Everything you've saved stays in a drawer, each save shown as
+  - **Feed your Tastemate:** **connect Spotify** (liked songs and saved
+    albums, kept up to date) and **Instagram** (your own posts, for
+    professional accounts), upload the download each app sends you (the
+    whole ZIP is fine: Spotify, Instagram saved posts, Google Takeout), paste
+    Pinterest pins, or add a save by hand. Everything you've saved stays in a drawer, each save shown as
     its parts (artist, sound, food, vibe, place, time, price, era), what
     it's tied to, and retaggable.
 - **Breaking saves down:** each save is read for facets, in three tiers:
@@ -146,8 +196,11 @@ server/
   posts.js          read a venue post into an event draft
   occasions.js      plan an occasion from a cluster (pure)
   collage.js        your bag and your room, drawn from your saves (pure)
-  routes/           auth, friends, profile (photo), saves (saves, graph, next, spots, occasion)
-  providers/        venue-posts (Instagram Business Discovery), musicbrainz (artist facts)
+  routes/           auth, friends, profile (photo), connect (apps), saves (saves, graph, next, spots, occasion)
+  connect.js        connected apps: tokens, refresh, sync, daily re-sync
+  ingest.js         rows from an import or a sync → tagged saves
+  secrets.js        seal tokens at rest (AES-256-GCM)
+  providers/        spotify and instagram (connect), venue-posts (Instagram Business Discovery), musicbrainz (artist facts)
   seed/             sample spots and demo users
 web/src/            React SPA (pages/, components/, styles.css)
 test/               node:test tests: graph, importers, posts, occasions, MusicBrainz, API

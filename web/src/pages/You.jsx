@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import Icon, { SAVE_ICON } from '../components/Icon.jsx';
 import TasteArt from '../components/TasteArt.jsx';
@@ -8,6 +8,7 @@ import Collage, { Thing } from '../components/Collage.jsx';
 import TasteBoard from '../components/TasteBoard.jsx';
 import { Vinyl } from '../components/Retro.jsx';
 import { uploadPhoto } from '../components/photo.js';
+import { isZip, readFromZip } from '../components/unzip.js';
 import { useAuth } from '../App.jsx';
 import { useActions } from '../components/actions.jsx';
 import { clusterVar } from '../components/viz.jsx';
@@ -18,11 +19,12 @@ const KIND_LABEL = { song: 'Songs', place: 'Places', look: 'Looks', product: 'Pr
 
 // How to get each export. None of these apps let another app read your saves
 // directly, but all of them let you download your own data.
+// `zip`: the files to pull out of the app's whole download, if that's what's uploaded.
 const IMPORTS = [
-  { source: 'spotify', icon: 'music', how: 'Spotify → Account → Privacy → Download your data. Upload YourLibrary.json, or paste “Artist - Song” lines.' },
-  { source: 'instagram', icon: 'image', how: 'Accounts Centre → Download your information → JSON. Upload saved_collections.json (or saved_posts.json). Collection names matter most.' },
-  { source: 'google_maps', icon: 'pin', how: 'Google Takeout → Saved (Maps). Upload “Saved Places.json” or a list’s CSV.' },
-  { source: 'pinterest', icon: 'bookmark', how: 'Paste pin titles or board names, one per line.' },
+  { source: 'spotify', icon: 'music', zip: [/YourLibrary\.json$/], how: 'Spotify → Account → Privacy → Download your data. Upload the ZIP or YourLibrary.json, or paste “Artist - Song” lines.' },
+  { source: 'instagram', icon: 'image', zip: [/saved_collections\.json$/, /saved_posts\.json$/], how: 'This is how your saved posts come in. Accounts Centre → Your information and permissions → Download your information → choose Saved, format JSON. Upload the ZIP as it comes.' },
+  { source: 'google_maps', icon: 'pin', zip: [/Saved Places\.json$/, /Saved\/[^/]+\.csv$/], how: 'Google Takeout → Saved and Maps (your places). Upload the ZIP, “Saved Places.json” or a list’s CSV.' },
+  { source: 'pinterest', icon: 'bookmark', zip: [], how: 'Paste pin titles or board names, one per line.' },
 ];
 
 // Your saves from every app in one place, the patterns that run across
@@ -76,6 +78,7 @@ export default function You() {
           add: (
             <section className="you-section">
               <div className="you-head"><h2>Feed your Tastemate</h2><p>The more you bring in, the sharper your character gets.</p></div>
+              <ConnectApps onDone={reload} />
               <div className="saves-tools">
                 <Importer onDone={reload} />
                 <AddSave onDone={reload} />
@@ -459,6 +462,111 @@ function FacetChips({ facets = {}, creator }) {
   );
 }
 
+const CONNECT_INFO = {
+  spotify: { icon: 'music', color: '#a9d6c6', what: 'Your liked songs and saved albums, kept up to date every day.' },
+  instagram: { icon: 'image', color: '#f2b8c3', what: 'Your own posts, for business and creator accounts. Instagram doesn’t share saved posts with any app, so bring those in from your download below.' },
+};
+
+/** "2 hours ago" from SQLite's UTC "YYYY-MM-DD HH:MM:SS". */
+function ago(ts) {
+  if (!ts) return 'never';
+  const s = Math.max(0, (Date.now() - new Date(`${ts.replace(' ', 'T')}Z`).getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.round(s / 60)} min ago`;
+  if (s < 86400) return `${Math.round(s / 3600)} h ago`;
+  return `${Math.round(s / 86400)} days ago`;
+}
+
+/** Connect Spotify and Instagram once, and they keep feeding your Tastemate. */
+function ConnectApps({ onDone }) {
+  const state = useApi('/connect');
+  const { toast } = useActions();
+  const [busy, setBusy] = useState(null);
+  const [params, setParams] = useSearchParams();
+  const syncing = state.data?.apps.some((a) => a.syncing);
+
+  // Back from the app: say how it went.
+  useEffect(() => {
+    const ok = params.get('connected');
+    const bad = params.get('connect_error');
+    if (!ok && !bad) return;
+    const label = (ok || bad)[0].toUpperCase() + (ok || bad).slice(1);
+    toast(ok ? `${label} connected. Bringing your library in…` : params.get('reason') === 'declined' ? `${label} wasn’t connected.` : `Couldn’t connect ${label}. Try again?`);
+    setParams({}, { replace: true });
+  }, []);
+  // While a library comes in, check back, then refresh your character.
+  useEffect(() => {
+    if (!syncing) return undefined;
+    const t = setTimeout(() => {
+      state.reload();
+      onDone();
+    }, 2000);
+    return () => clearTimeout(t);
+  }, [state.data]);
+
+  const act = async (provider, fn, done) => {
+    setBusy(provider);
+    try {
+      const r = await fn();
+      if (done) toast(done(r));
+      state.reload();
+      onDone();
+    } catch (e) {
+      toast(e.message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <section className="panel connect-panel">
+      <h2><Icon name="refresh" /> Connect your apps</h2>
+      <p className="muted small">Connect once and your Tastemate keeps up on its own. Tastemate only reads; it never posts or changes anything.</p>
+      <Loading state={state}>
+        {({ apps }) => (
+          <ul className="connect-list">
+            {apps.map((a) => {
+              const info = CONNECT_INFO[a.provider] || {};
+              return (
+                <li key={a.provider} className="connect-app" style={{ '--app': info.color }}>
+                  <span className="connect-icon"><Icon name={info.icon || 'bookmark'} size={22} /></span>
+                  <div className="connect-body">
+                    <b>{a.label}</b>
+                    {a.connected ? (
+                      <span className="small">
+                        {a.account && <>Connected as <b>{a.account}</b> · </>}
+                        {a.syncing ? 'bringing your library in…' : <>{a.saves} saves · synced {ago(a.last_synced_at)}</>}
+                      </span>
+                    ) : (
+                      <span className="muted small">{info.what}</span>
+                    )}
+                    {a.needs_reconnect && <span className="small warn-text">{a.label} asked to be connected again.</span>}
+                    {a.error && <span className="small warn-text">Last sync didn’t work: {a.error}</span>}
+                    {!a.available && <span className="muted small">Not switched on for this server yet.{import.meta.env.DEV ? ` Add the ${a.label} keys to .env (see README).` : ''}</span>}
+                  </div>
+                  <div className="connect-actions">
+                    {a.available && (!a.connected || a.needs_reconnect) && (
+                      <a className="btn btn-primary btn-sm" href={`/api/connect/${a.provider}/start`}>{a.connected ? 'Connect again' : `Connect ${a.label}`}</a>
+                    )}
+                    {a.connected && !a.needs_reconnect && (
+                      <button className="btn btn-outline btn-sm" disabled={busy === a.provider || a.syncing} onClick={() => act(a.provider, () => api.post(`/connect/${a.provider}/sync`), (r) => (r.error ? r.error : `${r.added} new from ${a.label}`))}>
+                        <Icon name="refresh" size={14} /> Sync now
+                      </button>
+                    )}
+                    {a.connected && (
+                      <button className="btn btn-ghost btn-sm" disabled={busy === a.provider} onClick={() => act(a.provider, () => api.del(`/connect/${a.provider}`), () => `${a.label} disconnected. Your saves stay.`)}>Disconnect</button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Loading>
+    </section>
+  );
+}
+
 function Importer({ onDone }) {
   const [source, setSource] = useState('spotify');
   const [text, setText] = useState('');
@@ -466,12 +574,17 @@ function Importer({ onDone }) {
   const [busy, setBusy] = useState(false);
   const info = IMPORTS.find((i) => i.source === source);
 
-  const send = async (content) => {
+  // One or more files' contents, imported in turn and added up.
+  const send = async (contents) => {
     setBusy(true);
     setMsg(null);
     try {
-      const r = await api.post('/saves/import', { source, text: content });
-      setMsg(`Found ${r.found}, added ${r.added}${r.skipped ? ` (${r.skipped} already here)` : ''}.${r.lookingUp ? ` Looking up ${r.lookingUp} artist${r.lookingUp > 1 ? 's' : ''}…` : ''}`);
+      const t = { found: 0, added: 0, skipped: 0, lookingUp: 0 };
+      for (const content of contents) {
+        const r = await api.post('/saves/import', { source, text: content });
+        for (const k of Object.keys(t)) t[k] += r[k] || 0;
+      }
+      setMsg(`Found ${t.found}, added ${t.added}${t.skipped ? ` (${t.skipped} already here)` : ''}.${t.lookingUp ? ` Looking up ${t.lookingUp} artist${t.lookingUp > 1 ? 's' : ''}…` : ''}`);
       setText('');
       onDone();
     } catch (e) {
@@ -484,13 +597,27 @@ function Importer({ onDone }) {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    if (file.size > 8e6) return setMsg('That file is over 8 MB. Pick the saves file from inside the export, not the whole archive.');
-    send(await file.text());
+    if (isZip(file)) {
+      setBusy(true);
+      setMsg('Opening the archive…');
+      try {
+        const found = info.zip.length ? await readFromZip(file, info.zip) : [];
+        if (!found.length) return setMsg(`No ${SOURCE_LABEL[source]} saves in that archive. Check it’s the right download, with Saved included.`);
+        await send(found.map((f) => f.text));
+      } catch (err) {
+        setMsg(err.message);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (file.size > 8e6) return setMsg('That file is over 8 MB. Upload the whole ZIP instead and we’ll find the saves in it.');
+    send([await file.text()]);
   };
 
   return (
     <section className="panel">
-      <h2><Icon name="upload" /> Bring in your saves</h2>
+      <h2><Icon name="upload" /> Or bring in a download</h2>
       <div className="seg seg-full" role="tablist" aria-label="App">
         {IMPORTS.map((i) => (
           <button key={i.source} role="tab" aria-selected={source === i.source} className={source === i.source ? 'on' : ''} onClick={() => setSource(i.source)}>
@@ -502,13 +629,13 @@ function Importer({ onDone }) {
       <div className="row">
         <label className="btn btn-outline file-btn">
           <Icon name="upload" size={16} /> Choose file
-          <input type="file" accept=".json,.csv,.txt" onChange={onFile} disabled={busy} hidden />
+          <input type="file" accept=".zip,.json,.csv,.txt" onChange={onFile} disabled={busy} hidden />
         </label>
         <span className="muted small">or paste below</span>
       </div>
       <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder={source === 'spotify' ? 'Miles Davis - So What' : source === 'pinterest' ? 'Minimal wool coat outfit' : 'Paste the file contents'} />
       <div className="row">
-        <button className="btn btn-primary btn-sm" disabled={busy || !text.trim()} onClick={() => send(text)}>Import</button>
+        <button className="btn btn-primary btn-sm" disabled={busy || !text.trim()} onClick={() => send([text])}>Import</button>
         {msg && <span className="small">{msg}</span>}
       </div>
     </section>
