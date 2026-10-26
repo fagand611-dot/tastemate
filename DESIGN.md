@@ -280,6 +280,21 @@ wear. The rest of the evening is built from the same picks:
 - **The countdown** (two days before to ten minutes before) and **the night
   in numbers** (people, bottles, records, hours).
 
+### Live feeds (`server/feeds.js`)
+
+Next needs to know what's actually on and where. Two feeds fill the spots
+table per city, when someone looks: **Ticketmaster** (events; genres become
+tastes: Jazz → jazz, Comedy → comedy, Music → live music) and **Google
+Places** (places; each search carries its tastes, "natural wine bar" →
+wine bar, intimate, and the place's own summary is read too; popularity is
+the review count on a log scale, so a well-rated place with few reviews
+counts as a find). Spots are upserted by (source, id), each city's fetch is
+recorded in `feed_runs`, stale ones are refreshed (events 6 hours, places 7
+days, after an error 30 minutes) while the page waits at most a few seconds,
+and spots gone from a feed for 45 days are dropped unless someone saved
+them. Live coordinates make "Make a night of it" real. Sample spots step
+aside per city and kind once that kind is live there.
+
 ### Connected apps (`server/connect.js`, `server/providers/`)
 
 The best saves are the ones that keep coming without anyone doing anything,
@@ -320,8 +335,9 @@ saves(id, user_id, kind[song|place|look|product|art|food|event|other], title, cr
       UNIQUE(user_id, source, external_key)        -- re-imports are idempotent
 spots(id, kind[event|place|product], title, city, venue, creators[], tags[], description,
       starts_at, ends_at, opened_at, price, url, popularity 0..1, source, external_id,
-      lat?, lng?, image?, is_demo, added_by?)
+      lat?, lng?, image?, credit?, fetched_at?, is_demo, added_by?)
 spot_dismissals(user_id, spot_id)
+feed_runs(city_key, provider, fetched_at, ok, count, error)
 connections(user_id, provider, account_id, account_name, access_token*, refresh_token*,
       expires_at, scope, last_synced_at, last_added, last_error)   -- * sealed
 oauth_states(state, user_id, provider, return_to, created_at)     -- one use, 10 minutes

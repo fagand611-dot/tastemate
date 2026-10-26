@@ -95,6 +95,7 @@ export default function Next() {
               )}
             </div>
 
+            <LiveLine live={d.live} city={d.city} />
             <PostToEvent cities={d.cities} canRefresh={d.canRefreshPosts} onAdded={state.reload} />
 
             {d.profileSize === 0 && (
@@ -385,6 +386,24 @@ function Postcard({ spot, match, reasons }) {
   );
 }
 
+const KIND_WORD = { event: 'what’s on', place: 'places' };
+
+/** Where the picks come from: live feeds, and when, or a note that these are samples. */
+function LiveLine({ live = [], city }) {
+  if (!city) return null;
+  const on = live.filter((f) => f.ok && f.count > 0);
+  if (!on.length) {
+    return <p className="live-line sample"><span className="live-dot" /> Sample picks for {city}{live.length ? ' while live listings load' : ''}. Live events and places appear here once they’re switched on.</p>;
+  }
+  const mins = Math.round((Date.now() - Math.min(...on.map((f) => f.fetched_at))) / 60000);
+  const age = mins < 60 ? `${Math.max(1, mins)} min ago` : mins < 1440 ? `${Math.round(mins / 60)} h ago` : `${Math.round(mins / 1440)} days ago`;
+  return (
+    <p className="live-line">
+      <span className="live-dot on" /> Live in {city}: {on.map((f) => `${f.kinds.map((k) => KIND_WORD[k] || k).join(' & ')} from ${f.label}`).join(', ')} · updated {age}
+    </p>
+  );
+}
+
 /** One pick: events are movie tickets, places are polaroids, things are price tags. */
 function SpotCard(props) {
   if (props.spot.kind === 'event') return <TicketCard {...props} />;
@@ -408,6 +427,7 @@ function TicketCard({ spot, match, reasons, onAct }) {
         <p className="sub">{[spot.venue, spot.city].filter(Boolean).join(' · ')}{spot.is_demo && <span className="badge demo">demo</span>}</p>
         <SpotReasons reasons={reasons} compact />
         <Actions {...a} />
+        {spot.credit && <p className="credit">{spot.credit}</p>}
       </div>
       <div className="ticket-stub" aria-label={spotWhen(spot) || undefined}>
         <span className="stub-sticker"><TasteArt name={spot.tags.find(hasArt) || 'explorer'} size={46} fill="#fff" /></span>
@@ -439,6 +459,7 @@ function SnapCard({ spot, match, reasons, onAct, tilt }) {
         <p className="sub">{[spot.venue, spot.city || 'Ships to you'].filter(Boolean).join(' · ')}{spot.is_demo && <span className="badge demo">demo</span>}</p>
         <SpotReasons reasons={reasons} compact />
         <Actions {...a} />
+        {spot.credit && <p className="credit">{spot.credit}</p>}
       </div>
       {a.why && <WhyDialog spot={spot} match={match} reasons={reasons} onClose={() => a.setWhy(false)} />}
     </article>

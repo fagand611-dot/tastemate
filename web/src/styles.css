@@ -1416,3 +1416,11 @@ h1 { letter-spacing: 0.04em; }
   .connect-app { grid-template-columns: auto minmax(0, 1fr); }
   .connect-actions { grid-column: 1 / -1; justify-content: flex-start; }
 }
+
+/* ---------- live feeds ---------- */
+.live-line { display: flex; align-items: center; gap: 8px; margin: 4px 0 14px; font-size: 0.86rem; color: var(--ink-2); }
+.live-line.sample { color: var(--muted); }
+.live-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--line-strong); }
+.live-dot.on { background: #2e9d5b; box-shadow: 0 0 0 3px color-mix(in srgb, #2e9d5b 25%, transparent); animation: breathe 2.4s ease-in-out infinite; }
+.credit { margin: 8px 0 0; font-size: 0.72rem; color: var(--muted); letter-spacing: 0.01em; }
+.ticket .credit { color: #5b4a50; }

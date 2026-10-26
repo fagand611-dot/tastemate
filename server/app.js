@@ -16,6 +16,9 @@ import connectRoutes from './routes/connect.js';
 import { createSpotify } from './providers/spotify.js';
 import { createInstagram } from './providers/instagram.js';
 import { createConnections } from './connect.js';
+import { createFeeds } from './feeds.js';
+import { createTicketmaster } from './providers/ticketmaster.js';
+import { createGooglePlaces } from './providers/google-places.js';
 import { createSealer, loadTokenKey } from './secrets.js';
 
 export function createApp({
@@ -24,6 +27,8 @@ export function createApp({
   artistLookup = createArtistLookup(),
   // Apps people can connect; null where this server has no keys for one.
   connectors = { spotify: createSpotify(), instagram: createInstagram() },
+  // Live events and places for Next; none without keys, and Next uses the samples.
+  feedProviders = [createTicketmaster(), createGooglePlaces()],
   // Only needed (and only made) once there's an app to connect.
   tokenKey = Object.values(connectors).some(Boolean) ? loadTokenKey() : null,
   publicUrl = process.env.PUBLIC_URL,
@@ -42,7 +47,8 @@ export function createApp({
   const cities = () => db.prepare('SELECT DISTINCT city FROM spots WHERE city IS NOT NULL').all().map((x) => x.city);
   const connections = createConnections({ db, connectors, sealer: createSealer(tokenKey || crypto.randomBytes(32)), enricher, cities });
   app.locals.connections = connections;
-  const ctx = { db, venueFeed, enricher, connections, connectors, publicUrl };
+  const feeds = createFeeds({ db, providers: feedProviders });
+  const ctx = { db, venueFeed, enricher, connections, connectors, publicUrl, feeds };
   const api = express.Router();
   authRoutes(api, ctx);
   friendRoutes(api, ctx);

@@ -64,6 +64,8 @@ folder (copy `.env.example`).
 | `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` | *(unset)* | Turns on **Connect Spotify** |
 | `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET` | *(unset)* | Turns on **Connect Instagram** |
 | `TOKEN_KEY` | a key kept in `data/token.key` | 32-byte hex key that seals connected apps' tokens |
+| `TICKETMASTER_API_KEY` | *(unset)* | Live events in Next ([Ticketmaster Discovery API](https://developer.ticketmaster.com), free) |
+| `GOOGLE_PLACES_API_KEY` | *(unset)* | Live cafés, food, bars, shops and galleries in Next (Places API (New), billed by Google) |
 | `IG_USER_ID` | *(unset)* | Your Instagram business account ID, for the venue feed |
 | `IG_ACCESS_TOKEN` | *(unset)* | A Meta Graph API token with `instagram_basic` |
 | `VENUE_ACCOUNTS` | *(unset)* | Venues to follow, e.g. `Dublin:workmansclub,Bangkok:studiolam` |
@@ -72,6 +74,27 @@ folder (copy `.env.example`).
 
 Without the three `IG_` / `VENUE_` variables the venue feed is off; pasting
 posts still works.
+
+### Live events and places in Next
+
+Out of the box Next uses sample spots, marked *demo*. With keys it fetches
+the real thing for whichever city someone looks at, their home city included
+(any city, not just the samples'):
+
+- **Events** from Ticketmaster (gigs, comedy, theatre, film), refreshed every
+  few hours, 45 days ahead, with dates, venue, prices, a photo and the link
+  to buy. Strongest in North America, Europe, Australia and New Zealand.
+- **Places** from Google Places: thirteen searches per city (specialty coffee,
+  bakeries, natural wine and cocktail bars, jazz bars, record and book shops,
+  galleries, vintage and design stores, noodles, street food, brunch), kept if
+  they're open and rated 4.2 or more by at least 20 people, refreshed weekly.
+  Photos come through Tastemate, so the key stays on the server, and each
+  card credits its rating and photographer as Google asks.
+
+Once a city has live events or places, its sample ones step aside (per kind:
+live events with no live places still shows sample places). A feed that fails
+is retried after half an hour and never breaks the page. Things to buy are
+still samples; there's no open feed for those yet.
 
 ### Connecting Spotify and Instagram
 

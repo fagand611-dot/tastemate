@@ -15,7 +15,7 @@ const IMPORT_SOURCES = ['spotify', 'instagram', 'google_maps', 'pinterest'];
 const PER_KIND = { event: 12, place: 12, product: 8 };
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-export default function savesRoutes(r, { db, venueFeed, enricher }) {
+export default function savesRoutes(r, { db, venueFeed, enricher, feeds }) {
   // Saves read with everything known about their artists.
   const readSaves = (userId) => interpret(getSaves(userId), { cache: loadCreatorCache(db) });
   const getSaves = (userId) => db.prepare('SELECT * FROM saves WHERE user_id = ? ORDER BY COALESCE(saved_at, created_at) DESC, id DESC').all(userId).map(hydrateSave);
@@ -23,9 +23,25 @@ export default function savesRoutes(r, { db, venueFeed, enricher }) {
   const homeCity = (userId) => db.prepare('SELECT home_city FROM users WHERE id = ?').get(userId)?.home_city ?? null;
   // Curated and feed spots are public; spots someone added from a post are
   // shown to them and their friends.
+  // Spots this person can see: curated and live ones, plus events they or their
+  // friends added. Samples step aside in cities where a live feed covers that kind.
   const visibleSpots = (userId) => {
     const ids = [userId, ...friendIds(db, userId)];
-    return db.prepare(`SELECT * FROM spots WHERE added_by IS NULL OR added_by IN (${ids.map(() => '?').join(',')})`).all(...ids).map(hydrateSpot);
+    const live = new Map();
+    const isLive = (s) => {
+      const k = `${s.city}|${s.kind}`.toLowerCase();
+      if (!live.has(k)) live.set(k, feeds.isLive(s.city, s.kind));
+      return live.get(k);
+    };
+    return db.prepare(`SELECT * FROM spots WHERE added_by IS NULL OR added_by IN (${ids.map(() => '?').join(',')})`).all(...ids)
+      .map(hydrateSpot)
+      .filter((s) => !(s.is_demo && s.city && isLive(s)));
+  };
+  // Cities Next can show: wherever there are spots, and, with live feeds on, your home city too.
+  const nextCities = (userId) => {
+    const home = homeCity(userId);
+    const known = cities();
+    return feeds.enabled && home && !known.some((c) => c.toLowerCase() === home.toLowerCase()) ? [...known, home].sort() : known;
   };
   const ownSave = (req) => {
     const s = db.prepare('SELECT * FROM saves WHERE id = ? AND user_id = ?').get(intParam(req.params.id), req.user.id);
@@ -91,8 +107,10 @@ export default function savesRoutes(r, { db, venueFeed, enricher }) {
   });
 
   // ----- You: your Tastemate character, your perfect day, your taste twin -----
-  r.get('/you', requireUser, (req, res) => {
+  r.get('/you', requireUser, ah(async (req, res) => {
     const me = req.user.id;
+    // Your perfect day is planned from live spots in your home city when there are some.
+    await feeds.ensureCity(homeCity(me), { wait: 2500 });
     const cache = loadCreatorCache(db);
     const saves = interpret(getSaves(me), { cache });
     const profile = tasteProfile(saves);
@@ -129,12 +147,12 @@ export default function savesRoutes(r, { db, venueFeed, enricher }) {
       untagged: saves.filter((s) => !s.tags.length).length,
       lookingUp: enricher.pending(),
     });
-  });
+  }));
 
   // ----- Next: what to do, see and buy in a city, for a date range -----
-  r.get('/next', requireUser, (req, res) => {
+  r.get('/next', requireUser, ah(async (req, res) => {
     const me = req.user.id;
-    const known = cities();
+    const known = nextCities(me);
     const asked = typeof req.query.city === 'string' ? req.query.city : null;
     const city = asked === 'anywhere' ? null : known.find((c) => c.toLowerCase() === (asked || homeCity(me) || '').toLowerCase()) || null;
     const today = new Date().toISOString().slice(0, 10);
@@ -142,6 +160,7 @@ export default function savesRoutes(r, { db, venueFeed, enricher }) {
     const to = ISO_DATE.test(req.query.to) ? req.query.to : addDays(from, 14);
     if (to < from) throw new HttpError(400, 'The end date is before the start date');
 
+    await feeds.ensureCity(city);
     const saves = readSaves(me);
     const profile = tasteProfile(saves);
     const spots = visibleSpots(me);
@@ -182,6 +201,8 @@ export default function savesRoutes(r, { db, venueFeed, enricher }) {
       from,
       to,
       cities: known,
+      // Where the picks come from: live feeds (with when they were fetched), or the samples.
+      live: city ? feeds.status(city) : [],
       events: group('event'),
       places: group('place'),
       products: group('product'),
@@ -193,7 +214,7 @@ export default function savesRoutes(r, { db, venueFeed, enricher }) {
       saved: saves.filter((s) => s.spot_id && (!city || !s.city || s.city.toLowerCase() === city.toLowerCase())).map(({ signals, ...s }) => ({ ...s, spot: hydrateSpot(db.prepare('SELECT * FROM spots WHERE id = ?').get(s.spot_id)) })),
       profileSize: profile.size,
     });
-  });
+  }));
 
   const getSpot = (req) => {
     const s = hydrateSpot(db.prepare('SELECT * FROM spots WHERE id = ?').get(intParam(req.params.id)));
@@ -262,12 +283,13 @@ export default function savesRoutes(r, { db, venueFeed, enricher }) {
   }));
 
   // ----- Occasions: a whole evening from your taste -----
-  r.get('/occasion', requireUser, (req, res) => {
+  r.get('/occasion', requireUser, ah(async (req, res) => {
     const me = req.user.id;
     const saves = readSaves(me);
     const profile = tasteProfile(saves);
-    const known = cities();
+    const known = nextCities(me);
     const city = known.find((c) => c.toLowerCase() === String(req.query.city || '').toLowerCase()) || homeCity(me);
+    await feeds.ensureCity(city);
     const here = visibleSpots(me).filter((x) => x.kind !== 'event' && (!x.city || !city || x.city.toLowerCase() === city.toLowerCase()));
     const shop = here.filter((x) => x.kind === 'product' || x.tags.includes('wine bar') || x.tags.includes('pastry'));
     const venues = here.filter((x) => x.kind === 'place' && x.city);
@@ -285,7 +307,14 @@ export default function savesRoutes(r, { db, venueFeed, enricher }) {
       city,
       cities: known,
     });
-  });
+  }));
+
+  // Photos from Google Places, fetched here so the key never reaches the browser.
+  r.get('/photos/google', requireUser, ah(async (req, res) => {
+    const url = await feeds.photoUrl(String(req.query.ref || ''));
+    if (!url) throw new HttpError(404, 'No photo');
+    res.set('Cache-Control', 'private, max-age=3600').redirect(url);
+  }));
 
   // Saving a spot makes it a save like any other, so it feeds the graph too.
   r.post('/spots/:id/save', requireUser, (req, res) => {

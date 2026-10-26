@@ -52,6 +52,8 @@ CREATE TABLE IF NOT EXISTS spots (
   lat REAL,
   lng REAL,
   image TEXT,           -- a photo of the place or thing, from its feed
+  credit TEXT,          -- where it came from, shown on the card ("Tickets via Ticketmaster")
+  fetched_at TEXT,      -- last time a live feed returned it
   source TEXT NOT NULL DEFAULT 'local',
   external_id TEXT,
   is_demo INTEGER NOT NULL DEFAULT 0,
@@ -95,6 +97,17 @@ CREATE TABLE IF NOT EXISTS spot_dismissals (
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   spot_id INTEGER NOT NULL REFERENCES spots(id) ON DELETE CASCADE,
   PRIMARY KEY (user_id, spot_id)
+);
+
+-- When each live feed last fetched each city (events, places).
+CREATE TABLE IF NOT EXISTS feed_runs (
+  city_key TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  fetched_at INTEGER NOT NULL,   -- ms since epoch
+  ok INTEGER NOT NULL,
+  count INTEGER NOT NULL DEFAULT 0,
+  error TEXT,
+  PRIMARY KEY (city_key, provider)
 );
 
 -- Apps a person has connected (Spotify, Instagram). Tokens are sealed with
@@ -150,6 +163,7 @@ function migrate(db) {
   if (!has('spots', 'added_by')) db.exec('ALTER TABLE spots ADD COLUMN added_by INTEGER REFERENCES users(id) ON DELETE CASCADE');
   if (!has('spots', 'lat')) db.exec('ALTER TABLE spots ADD COLUMN lat REAL; ALTER TABLE spots ADD COLUMN lng REAL');
   if (!has('spots', 'image')) db.exec('ALTER TABLE spots ADD COLUMN image TEXT');
+  if (!has('spots', 'credit')) db.exec('ALTER TABLE spots ADD COLUMN credit TEXT; ALTER TABLE spots ADD COLUMN fetched_at TEXT');
   if (!has('users', 'avatar')) db.exec('ALTER TABLE users ADD COLUMN avatar TEXT; ALTER TABLE users ADD COLUMN avatar_at TEXT');
   clearCsvJunk(db);
 }
@@ -186,6 +200,22 @@ export function hydrateSave(row) {
 
 export function hydrateSpot(row) {
   return row && { ...row, tags: JSON.parse(row.tags || '[]'), creators: JSON.parse(row.creators || '[]'), is_demo: !!row.is_demo };
+}
+
+/** Insert or refresh a spot from a live feed (the feed's latest word wins). */
+export function upsertFeedSpot(db, s) {
+  db.prepare(
+    `INSERT INTO spots (kind, title, city, venue, creators, tags, description, starts_at, ends_at, price, url, popularity, lat, lng, image, credit, source, external_id, is_demo, fetched_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0, datetime('now'))
+     ON CONFLICT (source, external_id) DO UPDATE SET kind = excluded.kind, title = excluded.title, city = excluded.city, venue = excluded.venue,
+       tags = excluded.tags, description = excluded.description, starts_at = excluded.starts_at, ends_at = excluded.ends_at, price = excluded.price,
+       url = excluded.url, popularity = excluded.popularity, lat = excluded.lat, lng = excluded.lng, image = excluded.image, credit = excluded.credit,
+       fetched_at = excluded.fetched_at`
+  ).run(
+    s.kind, s.title, s.city ?? null, s.venue ?? null, JSON.stringify(s.creators ?? []), JSON.stringify(s.tags ?? []), s.description ?? null,
+    s.starts_at ?? null, s.ends_at ?? null, s.price ?? null, s.url ?? null, s.popularity ?? 0.5, s.lat ?? null, s.lng ?? null, s.image ?? null,
+    s.credit ?? null, s.source, String(s.external_id)
+  );
 }
 
 /** Insert a spot (or return the existing one with the same source/external_id). */
