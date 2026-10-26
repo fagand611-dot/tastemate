@@ -202,6 +202,11 @@ crosswords):
   with their taste icon stuck on as a label, falling back to the
   illustration when there's no photo; products have price tags, music is vinyl that spins on hover, and the Host
   moodboard is a cork board of pinned polaroids tied with red string.
+- **Your title card:** You opens like a film's title card, not a cartoon:
+  a cream page in a fine maroon double frame, your photo in an arched gilt
+  frame (or your initial as a monogram), your Tastemate name in spaced
+  capitals, the tagline in italic serif, and your three signature tastes
+  ("CEREBRAL · JAZZ · MOODY").
 - **Character art:** the Tastemate mascot, a round big-eyed Crybaby-ish
   character with blush cheeks and a single tear, holding a sticker of your
   taste, on a candy-striped pastry-box card. It blinks and bobs.
@@ -258,6 +263,12 @@ in its sleeve, a matchbook from the venue, dress-code swatches, a luggage
 tag of guests, the running order, the scene, a playing card, a to-do
 notepad, polaroids and a receipt for the shopping). Each opens its detail.
 
+Themes are offered as a few clearly different party ideas, one per name:
+each cluster's leading taste picks an idea (jazz → *Jazz club supper*,
+pastry → *Parisian café brunch*, thai → *Street-food birthday*, books →
+*Old-library supper*, wedding → *Garden-party*, golf → *Clubhouse*…), at most
+four, each card saying which saves it comes from ("because of 'Candle-lit
+reading nook', 'Speakeasy with a hi-fi' and 12 more") with its colours.
 The theme is the cluster that best fits the occasion's leaning (date night
 leans *romantic* and *intimate*, house party *lively*), switchable by the
 user. The theme vector is the cluster's tags, the occasion's leaning and a

@@ -220,6 +220,38 @@ function pick(list, vec, n, theme) {
 // ("Slow jazz supper", not "Jazz slow supper").
 const NOUNS = new Set(['jazz', 'vinyl', 'house', 'techno', 'pastry', 'coffee', 'art', 'wine bar', 'thai', 'street food', 'books', 'folk', 'food']);
 
+// The party idea a cluster's leading taste makes: "Jazz club supper",
+// "Street-food birthday". The first of a cluster's tags with an idea wins.
+const CONCEPTS = [
+  [['jazz', 'vinyl', 'soul'], 'Jazz club'],
+  [['wine bar'], 'Natural-wine'],
+  [['cocktails', 'speakeasy'], 'Speakeasy'],
+  [['thai', 'street food', 'noodles', 'market'], 'Street-food'],
+  [['pastry', 'coffee', 'brunch'], 'Parisian café'],
+  [['books', 'dark academia', 'cerebral'], 'Old-library'],
+  [['film', 'cinema'], 'Movie-night'],
+  [['art', 'gallery', 'photography'], 'Gallery'],
+  [['house', 'techno', 'electronic', 'lively', 'high-energy'], 'Disco'],
+  [['folk', 'cozy'], 'Fireside'],
+  [['wedding'], 'Garden-party'],
+  [['moody', 'intimate', 'romantic'], 'Candlelit'],
+  [['golf', 'sport'], 'Clubhouse'],
+  [['wellness'], 'Slow-living'],
+  [['japanese'], 'Izakaya'],
+  [['interiors', 'design', 'minimal', 'architecture'], 'Modernist'],
+  [['vintage', 'classic'], 'Vintage'],
+  [['fashion', 'luxe'], 'Dress-up'],
+];
+
+/** A theme's name: its party idea, or failing that its moods, then the occasion. */
+export function conceptName(tags, occasion) {
+  for (const t of tags) {
+    const c = CONCEPTS.find(([ts]) => ts.includes(t));
+    if (c) return `${c[1]} ${occasion.noun}`;
+  }
+  return themeName(tags, occasion);
+}
+
 export function themeName(tags, occasion) {
   const picked = [];
   for (const t of tags) {
@@ -312,7 +344,7 @@ export function planOccasion({ type, clusters, theme, profile, saves, shop = [],
   const cluster = idx != null ? clusters[idx] : null;
   const vec = themeVector(cluster, occasion, profile);
   const themeTags = [...vec.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([t]) => t);
-  const name = themeName(cluster ? cluster.tags : themeTags, occasion);
+  const name = conceptName(cluster ? cluster.tags : themeTags, occasion);
 
   const drinks = (kind, n) => pick(DRINKS.filter((d) => d[1] === kind), vec, n, themeTags);
   const food = (course, n) => pick(FOODS.filter((f) => f[1] === course), vec, n, themeTags);
@@ -386,7 +418,11 @@ export function planOccasion({ type, clusters, theme, profile, saves, shop = [],
     numbers,
     venue: venue && { spot: venue.spot, because: venue.because },
     occasions: Object.entries(OCCASIONS).map(([k, o]) => ({ type: k, label: o.label })),
-    themes: order.map((i) => ({ index: i, name: themeName(clusters[i].tags, occasion), tags: clusters[i].tags })),
+    // A few clearly different ideas (one per name), each with the saves it comes from.
+    themes: order
+      .map((i) => ({ index: i, name: conceptName(clusters[i].tags, occasion), tags: clusters[i].tags, from: clusters[i].count + clusters[i].maybe, examples: (clusters[i].examples || []).slice(0, 3).map((x) => x.title), palette: palette(clusters[i].tags).slice(0, 4) }))
+      .filter((t, k, all) => all.findIndex((x) => x.name === t.name) === k)
+      .slice(0, 4),
     theme: { index: idx, name, tags: themeTags, palette: palette(cluster ? cluster.tags : themeTags), from: cluster ? cluster.count + cluster.maybe : 0 },
     drinks: drinkPicks,
     food: foodPicks,

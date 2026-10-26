@@ -45,10 +45,14 @@ export default function Host() {
               <Empty>Bring in a few more saves first: the mood comes from your taste. <Link to="/you">Feed your Tastemate</Link></Empty>
             ) : (
               <>
-                <div className="chips" aria-label="Themes">
-                  <span className="label">Moods from your saves</span>
+                <p className="label themes-label">Pick a theme</p>
+                <div className="themes" role="radiogroup" aria-label="Theme">
                   {d.themes.map((t) => (
-                    <button key={t.index} className={`chip ${d.theme.index === t.index ? 'on' : ''}`} onClick={() => setTheme(t.index)}>{t.name}</button>
+                    <button key={t.index} role="radio" aria-checked={d.theme.index === t.index} className={`theme-pick ${d.theme.index === t.index ? 'on' : ''}`} onClick={() => setTheme(t.index)}>
+                      <span className="theme-dots" aria-hidden>{t.palette.map((c) => <i key={c} style={{ background: c }} />)}</span>
+                      <b>{t.name}</b>
+                      <small>because of {t.examples.slice(0, 2).map((x) => `“${x.length > 28 ? `${x.slice(0, 26)}…` : x}”`).join(', ')}{t.from > 2 ? ` and ${t.from - 2} more` : ''}</small>
+                    </button>
                   ))}
                 </div>
                 <Plan d={d} />

@@ -626,27 +626,6 @@ ul.playlist { gap: 6px; }
 :root[data-theme='dark'] .day-slot { background: color-mix(in srgb, var(--slot) 16%, var(--surface)); border-color: color-mix(in srgb, var(--slot) 45%, transparent); }
 .taste-art { display: block; flex: none; filter: drop-shadow(3px 4px 0 rgba(58, 42, 72, 0.18)); }
 
-/* The character reveal: a big pastel card, the mascot holding your taste. */
-.character {
-  position: relative; overflow: hidden; border-radius: 36px; padding: 36px 40px; margin: 0 0 12px;
-  display: grid; grid-template-columns: auto 1fr; gap: 36px; align-items: center;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--pink) 55%, var(--surface)), color-mix(in srgb, var(--lilac) 45%, var(--surface)) 55%, color-mix(in srgb, var(--sky) 50%, var(--surface)));
-  border: 2px solid var(--surface); box-shadow: var(--shadow-lg);
-}
-.character-blobs { position: absolute; inset: 0; pointer-events: none; }
-.character-blobs .blob { position: absolute; border-radius: 50%; filter: blur(46px); opacity: 0.4; animation: drift 14s ease-in-out infinite alternate; }
-.character-blobs .b0 { width: 340px; height: 340px; right: -80px; top: -110px; }
-.character-blobs .b1 { width: 260px; height: 260px; right: 220px; bottom: -140px; animation-delay: -5s; }
-.character-blobs .b2 { width: 220px; height: 220px; left: -70px; bottom: -120px; animation-delay: -9s; }
-@keyframes drift { to { transform: translate(30px, -20px) scale(1.12); } }
-.character-art { position: relative; display: grid; place-items: center; }
-.character-art::before { content: ''; position: absolute; width: 86%; height: 86%; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.85), transparent 70%); }
-.character-body { position: relative; }
-.character .eyebrow { display: inline-block; background: var(--surface); padding: 5px 12px; border-radius: 999px; box-shadow: var(--shadow-sm); }
-.character h1 { font-size: clamp(2.3rem, 5.4vw, 3.6rem); margin: 14px 0 4px; line-height: 1.02; font-weight: 700; }
-.character-tagline { font-family: var(--serif); font-weight: 500; font-size: 1.3rem; color: var(--accent); margin: 0 0 14px; }
-.character-desc { font-size: 1.12rem; margin: 0 0 10px; max-width: 50ch; color: var(--ink); }
-.character-apps { font-size: 0.88rem; color: var(--ink-2); margin: 0 0 20px; font-weight: 600; }
 
 /* The mascot */
 .mascot { position: relative; display: inline-block; flex: none; --m-ink: #1f2433; }
@@ -747,9 +726,6 @@ ul.playlist { gap: 6px; }
 .facet-row { gap: 6px; margin-top: 6px; }
 
 @media (max-width: 640px) {
-  .character { grid-template-columns: 1fr; padding: 26px 22px; gap: 8px; border-radius: 30px; }
-  .character-art { justify-self: start; }
-  .character-art .mascot { transform: scale(0.82); transform-origin: left center; margin: -14px 0 -18px; }
   .you-section { margin-top: 48px; }
 }
 
@@ -792,29 +768,6 @@ ul.playlist { gap: 6px; }
 .save-icon { background: var(--butter); color: var(--ink); border: 2px solid var(--outline); }
 .save-icon.is-vinyl { background: none; border: 0; }
 
-/* The character card: a flat Mendl's-pink box with candy stripes, like a pastry box. */
-.character {
-  background:
-    repeating-linear-gradient(90deg, transparent 0 34px, color-mix(in srgb, #fff 45%, transparent) 34px 52px),
-    #f6b8c6;
-  border: 2px solid var(--outline); box-shadow: 6px 6px 0 var(--hard); border-radius: 30px;
-}
-.character-blobs { display: none; }
-.character-art::before { background: radial-gradient(circle, color-mix(in srgb, #fff 85%, transparent) 40%, transparent 70%); }
-.character .eyebrow { background: var(--surface); color: var(--ink); border: 2px solid var(--outline); box-shadow: 2px 2px 0 var(--hard); }
-.character h1 { color: #1f2433; font-weight: 700; letter-spacing: -0.02em; }
-.character-tagline { color: #b8402b; font-weight: 600; }
-.character-desc, .character-apps { color: #1f2433; }
-.hero-photo {
-  position: absolute; left: -6px; bottom: -4px; width: 78px; height: 88px; padding: 6px 6px 16px; cursor: pointer;
-  background: #fff; border: 2px solid #1f2433; box-shadow: 3px 3px 0 #1f2433; transform: rotate(-8deg);
-  display: grid; place-items: center; font-size: 0.7rem; font-weight: 800; color: #1f2433; text-align: center; line-height: 1.2;
-  transition: transform 0.3s var(--spring);
-}
-.hero-photo:hover { transform: rotate(-2deg) scale(1.06); }
-.hero-photo img { width: 100%; height: 100%; object-fit: cover; }
-.hero-photo:not(.has) { background: #f6d77a; color: #1f2433; }
-.hero-photo span { display: grid; place-items: center; gap: 2px; }
 .avatar-pick { position: relative; cursor: pointer; }
 .avatar-edit { position: absolute; right: -2px; bottom: -2px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; border: 2px solid var(--outline); }
 
@@ -1189,10 +1142,7 @@ h1 { letter-spacing: 0.04em; }
 .eyebrow, .label, .ticket-kicker { font-family: var(--serif); letter-spacing: 0.18em; }
 .btn { font-family: var(--serif); text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.82rem; font-weight: 600; box-shadow: none !important; }
 .btn-sm { font-size: 0.74rem; }
-.character-tagline, .guest-title, .friend-title, .chic { font-family: var(--chic); font-style: italic; font-weight: 500; letter-spacing: 0; text-transform: none; }
-.character h1 { text-transform: none; letter-spacing: 0.01em; color: var(--maroon, #6b1f2a); }
-.character h1 { color: #6b1f2a; }
-.character-tagline { color: #c8372d; font-size: 1.45rem; }
+.guest-title, .friend-title, .chic { font-family: var(--chic); font-style: italic; font-weight: 500; letter-spacing: 0; text-transform: none; }
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
@@ -1396,11 +1346,6 @@ h1 { letter-spacing: 0.04em; }
 .postcard-photo .photo-label { left: auto; bottom: auto; right: 14px; top: 14px; }
 .you.subpage, .you.home { padding-bottom: 72px; }
 .obj-ticket { width: min(196px, 100%); }
-@media (max-width: 640px) {
-  .chips[aria-label='Themes'] { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
-  .chips[aria-label='Themes'] .chip { flex: none; }
-  .chips[aria-label='Themes'] .label { flex: none; align-self: center; }
-}
 
 /* ---------- Connect your apps ---------- */
 .connect-panel { margin-bottom: 18px; }
@@ -1464,3 +1409,55 @@ h1 { letter-spacing: 0.04em; }
 .guest-gone { margin-top: 30vh; font-family: var(--chic); font-style: italic; font-size: 1.3rem; }
 .guest-foot { font-size: 0.8rem; color: #8f8086; }
 .invite-panel .invite { width: min(340px, 100%); align-self: center; }
+
+/* ---------- Host: pick a theme ---------- */
+.themes-label { margin: 18px 0 8px; }
+.themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 12px; margin-bottom: 8px; }
+.theme-pick { display: grid; gap: 6px; align-content: start; text-align: left; padding: 14px 16px; border-radius: 18px; border: 1.5px solid var(--line-strong); background: var(--surface); color: var(--ink); cursor: pointer; min-height: 0; box-shadow: none; transition: border-color 0.2s, transform 0.25s var(--spring); }
+.theme-pick:hover:not(:disabled) { transform: translateY(-2px); box-shadow: none; border-color: var(--outline); }
+.theme-pick.on { border-color: var(--outline); background: var(--surface-2); box-shadow: inset 0 0 0 1.5px var(--outline); }
+.theme-pick b { font-family: var(--chic); font-style: italic; font-weight: 500; font-size: 1.2rem; line-height: 1.15; }
+.theme-pick small { color: var(--muted); font-size: 0.8rem; line-height: 1.35; }
+.theme-dots { display: flex; gap: 4px; }
+.theme-dots i { width: 14px; height: 14px; border-radius: 50%; box-shadow: 0 0 0 1px rgba(43, 29, 34, 0.15); }
+@media (max-width: 640px) {
+  .themes { grid-auto-flow: column; grid-auto-columns: 78%; grid-template-columns: none; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; }
+  .theme-pick { scroll-snap-align: start; }
+}
+
+/* ---------- You: the title card ----------
+   Like the opening card of a film: a cream page in a fine double frame, your
+   portrait in an arched gilt frame, your Tastemate name in spaced capitals. */
+.title-card {
+  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 44px; align-items: center;
+  padding: 46px 52px; margin: 0 0 12px; background: #fffaf0; color: #2b1d22;
+  outline: 1.5px solid #6b1f2a; outline-offset: -12px; box-shadow: inset 0 0 0 16px #fffaf0, inset 0 0 0 17px #6b1f2a;
+  border-radius: 4px;
+}
+.portrait { position: relative; display: grid; justify-items: center; gap: 10px; }
+.portrait-frame {
+  width: 190px; aspect-ratio: 4 / 5; border-radius: 95px 95px 6px 6px; padding: 7px; cursor: pointer;
+  background: linear-gradient(135deg, #e3c37a, #b8892f 45%, #f0d999 70%, #a87a26); display: block;
+}
+.portrait-frame > span { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 88px 88px 3px 3px; overflow: hidden; background: #f2b8c3; }
+.portrait-frame img { width: 100%; height: 100%; object-fit: cover; }
+.monogram { font-family: var(--chic); font-style: italic; font-size: 5rem; color: #6b1f2a; line-height: 1; }
+.portrait-add { font-family: var(--serif); text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.66rem; font-weight: 600; color: #6b1f2a; }
+.title-card .tc-eyebrow { margin: 0; font-family: var(--serif); text-transform: uppercase; letter-spacing: 0.24em; font-size: 0.72rem; font-weight: 600; color: #6b1f2a; }
+.title-card h1 { margin: 10px 0 2px; font-family: var(--serif); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; font-size: clamp(1.9rem, 4.4vw, 3.1rem); line-height: 1.05; color: #2b1d22; }
+.title-card .tc-tagline { margin: 0 0 16px; font-family: var(--chic); font-style: italic; font-size: 1.4rem; color: #c8372d; }
+.title-card .tc-rule { width: 64px; height: 1.5px; background: #6b1f2a; margin: 0 0 16px; }
+.title-card .tc-desc { margin: 0 0 14px; font-size: 1.06rem; max-width: 52ch; color: #3d2c31; }
+.title-card .tc-signature { margin: 0 0 6px; font-family: var(--serif); text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.78rem; font-weight: 600; color: #2b1d22; }
+.title-card .tc-apps { margin: 0 0 20px; font-size: 0.82rem; color: #8f8086; }
+.title-card .btn-outline { background: transparent; color: #2b1d22; border-color: #2b1d22; }
+@media (max-width: 720px) {
+  .title-card { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 20px; padding: 40px 26px 34px; }
+  .portrait-frame { width: 150px; }
+  .title-card .tc-rule { margin-inline: auto; }
+  .title-card .row { justify-content: center; }
+}
+.themes .theme-pick { display: grid; justify-items: start; justify-content: stretch; white-space: normal; height: auto; overflow: hidden; }
+.themes .theme-pick b, .themes .theme-pick.on b { color: var(--ink); }
+.themes .theme-pick small { white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 640px) { .host-controls .seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; } .host-controls .seg button { flex: none; } }

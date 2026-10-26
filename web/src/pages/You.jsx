@@ -123,7 +123,7 @@ function Home({ d, saves }) {
   ] : [];
   return (
     <div className="you home">
-      {c ? <Character c={c} /> : <Welcome />}
+      {c ? <Character c={c} signature={(d.board?.tastes || []).slice(0, 3).map((t) => t.tag)} /> : <Welcome />}
       {d.lookingUp > 0 && <p className="notice small">Looking up {d.lookingUp} more artist{d.lookingUp > 1 ? 's' : ''}… your character will sharpen in a moment.</p>}
       <div className="quick">
         <Link to="/you/add" className="quick-btn primary"><Icon name="plus" size={20} /><span>Add saves</span></Link>
@@ -230,7 +230,7 @@ function BoardWithUser({ board, character }) {
   return <TasteBoard board={board} character={character} avatarUrl={user.avatar_url} name={user.display_name.split(' ')[0]} />;
 }
 
-/** Your photo, pinned next to your character, with a way to add or change it. */
+/** Your portrait in the title card's arched frame (or your initial), tap to add or change it. */
 function Photo() {
   const { user, refresh } = useAuth();
   const { toast } = useActions();
@@ -251,27 +251,32 @@ function Photo() {
     }
   };
   return (
-    <label className={`hero-photo ${user.avatar_url ? 'has' : ''}`} title={user.avatar_url ? 'Change your photo' : 'Add your photo'}>
-      {user.avatar_url ? <img src={user.avatar_url} alt="Your photo" /> : <span><Icon name="plus" size={18} /> {busy ? 'Uploading…' : 'Add your photo'}</span>}
-      <input type="file" accept="image/*" onChange={pick} hidden disabled={busy} />
-    </label>
+    <div className="portrait">
+      <label className="portrait-frame" title={user.avatar_url ? 'Change your photo' : 'Add your photo'}>
+        <span>{user.avatar_url ? <img src={user.avatar_url} alt="Your photo" /> : <b className="monogram">{user.display_name[0].toUpperCase()}</b>}</span>
+        <input type="file" accept="image/*" onChange={pick} hidden disabled={busy} />
+      </label>
+      {!user.avatar_url && <span className="portrait-add">{busy ? 'Uploading…' : '+ Add your photo'}</span>}
+    </div>
   );
 }
 
 function Welcome() {
   return (
-    <section className="character hero-empty">
-      <div className="character-art"><Mascot size={170} prop="explorer" color="pink" /></div>
-      <div className="character-body">
-        <p className="eyebrow">Meet your Tastemate</p>
+    <section className="title-card">
+      <Photo />
+      <div>
+        <p className="tc-eyebrow">Your Tastemate</p>
         <h1>Who are you, taste-wise?</h1>
-        <p className="character-desc">Bring in what you’ve saved on Spotify, Instagram, Google Maps or Pinterest. We’ll read all of it and tell you who you are, then find you things to do.</p>
+        <div className="tc-rule" />
+        <p className="tc-desc">Bring in what you’ve saved on Spotify, Instagram, Google Maps or Pinterest. We’ll read all of it and tell you who you are, then find you things to do.</p>
+        <Link to="/you/add" className="btn btn-primary">Bring in your saves</Link>
       </div>
     </section>
   );
 }
 
-function Character({ c }) {
+function Character({ c, signature = [] }) {
   const navigate = useNavigate();
   const { toast } = useActions();
   const share = async () => {
@@ -287,20 +292,16 @@ function Character({ c }) {
     }
   };
   return (
-    <section className="character">
-      <div className="character-blobs" aria-hidden>
-        {c.sides.map((sd) => <span key={sd.index} className={`blob b${sd.index}`} style={{ background: clusterVar(sd.index) }} />)}
-      </div>
-      <div className="character-art">
-        <Mascot size={190} prop={c.key} color="pink" />
-        <Photo />
-      </div>
-      <div className="character-body">
-        <p className="eyebrow">Meet your Tastemate</p>
+    <section className="title-card">
+      <Photo />
+      <div>
+        <p className="tc-eyebrow">Your Tastemate · Nº {String(c.saves).padStart(3, '0')}</p>
         <h1>{c.name}</h1>
-        {c.tagline && <p className="character-tagline">{c.tagline}</p>}
-        {c.description && <p className="character-desc">{c.description}</p>}
-        <p className="character-apps">Read from {c.saves} saves across {c.apps.map((a) => a.label).join(', ')}.</p>
+        {c.tagline && <p className="tc-tagline">{c.tagline}</p>}
+        <div className="tc-rule" />
+        {c.description && <p className="tc-desc">{c.description}</p>}
+        {signature.length > 0 && <p className="tc-signature">{signature.join(' · ')}</p>}
+        <p className="tc-apps">Read from {c.saves} saves across {c.apps.map((a) => a.label).join(', ')}.</p>
         <div className="row">
           <button className="btn btn-primary" onClick={() => navigate('/next')}>Take me somewhere <Icon name="arrow" size={18} /></button>
           <button className="btn btn-outline" onClick={share}>Share my Tastemate</button>
