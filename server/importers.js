@@ -3,7 +3,8 @@
 // lets you download your own data, so importing that file is the reliable
 // path today:
 //
-//   Spotify      Account → Privacy → "Download your data" → YourLibrary.json
+//   Spotify      Account → Privacy → "Download your data" → YourLibrary.json,
+//                or a CSV of liked songs / playlist tracks from an export tool
 //   Instagram    Accounts Centre → "Download your information" (JSON) →
 //                saved_posts.json / saved_collections.json
 //   Google Maps  Google Takeout → "Saved" → Saved Places.json, or a list as CSV
@@ -44,6 +45,7 @@ function tryJson(s) {
 // Also accepts the Web API shape ({ items: [{ track: { name, artists, ... } }] })
 // or plain "Artist - Track" lines.
 function spotify(json, raw) {
+  if (!json && looksLikeCsv(raw)) return spotifyCsv(raw);
   if (!json) return lines(raw, 'song', (l) => {
     const [a, t] = l.split(/\s+[-–]\s+/);
     return t ? { title: t, creator: a } : { title: l };
@@ -71,6 +73,47 @@ function spotify(json, raw) {
     out.push({ kind: 'song', title: a.album, creator: a.artist || null, url: uriToUrl(a.uri), external_key: a.uri || `album|${a.artist}|${a.album}` });
   }
   return out;
+}
+
+// CSV exports from Spotify tools (liked songs, playlist tracks, Exportify):
+// columns are found by name, since every tool calls them something different.
+const COLS = {
+  title: ['track_title', 'track name', 'track_name', 'title', 'name', 'song', 'track'],
+  artist: ['artist_or_subtitle', 'subtitle_artist_or_description', 'artist name(s)', 'artist_names', 'artist name', 'artist', 'artists'],
+  album: ['album name', 'album_name', 'album'],
+  uri: ['track_uri', 'track uri', 'spotify_uri', 'uri'],
+  url: ['track_url', 'spotify_url', 'url'],
+  playlist: ['playlist_name', 'playlist name', 'playlist'],
+  added: ['added at', 'added_at', 'date added'],
+  category: ['category', 'type'],
+};
+const pick = (row, names) => names.map((n) => row[n]).find((v) => v) || null;
+
+function looksLikeCsv(raw) {
+  const head = raw.split('\n', 1)[0].toLowerCase();
+  return head.includes(',') && COLS.title.some((n) => head.split(',').map((h) => h.trim().replace(/^"|"$/g, '')).includes(n));
+}
+
+function spotifyCsv(raw) {
+  const byKey = new Map();
+  for (const r of csv(raw)) {
+    const title = pick(r, COLS.title);
+    // Podcasts and audiobooks aren't music taste.
+    if (!title || /podcast|episode|show|audiobook/i.test(pick(r, COLS.category) || '')) continue;
+    const creator = pick(r, COLS.artist);
+    const url = (pick(r, COLS.url) || '').split('?')[0] || null;
+    const uri = pick(r, COLS.uri) || null;
+    const key = uri || `${creator}|${title}`;
+    const playlist = pick(r, COLS.playlist);
+    const seen = byKey.get(key);
+    // The same song in several playlists is one save, with its playlists' names (which say a lot) as its collection.
+    if (seen) {
+      if (playlist && !seen.lists.includes(playlist) && seen.lists.length < 3) seen.lists.push(playlist);
+      continue;
+    }
+    byKey.set(key, { kind: 'song', title, creator, album: pick(r, COLS.album), lists: playlist ? [playlist] : [], url: url || uriToUrl(uri), external_key: key, saved_at: pick(r, COLS.added) });
+  }
+  return [...byKey.values()].map(({ album, lists, ...row }) => ({ ...row, collection: [album, ...lists].filter(Boolean).join(' · ') || null }));
 }
 
 function uriToUrl(uri) {

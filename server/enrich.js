@@ -48,9 +48,14 @@ export function createEnricher(db, lookup, { delayMs = 1100 } = {}) {
         facts = undefined;
       }
       current = null;
-      if (facts !== undefined) {
-        db.prepare('INSERT OR REPLACE INTO creator_facts (name, facts) VALUES (?, ?)').run(key, facts ? JSON.stringify(facts) : null);
-        if (facts) retag(key);
+      // Runs unattended: a bad answer is logged, never allowed to take the server down.
+      try {
+        if (facts !== undefined) {
+          db.prepare('INSERT OR REPLACE INTO creator_facts (name, facts) VALUES (?, ?)').run(key, facts ? JSON.stringify(facts) : null);
+          if (facts) retag(key);
+        }
+      } catch (e) {
+        console.error(`Artist lookup for "${name}":`, e.message);
       }
       if (queue.length) await sleep(delayMs);
     }

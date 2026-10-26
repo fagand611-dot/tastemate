@@ -25,6 +25,23 @@ test('importers: Spotify library export, plain lines and the Web API shape', () 
   assert.equal(web[0].creator, 'Massive Attack');
 });
 
+test('importers: Spotify CSVs (liked songs, playlist tracks, Exportify), columns found by name', () => {
+  const liked = parseImport('spotify', 'category,title,subtitle_artist_or_description,spotify_uri,spotify_url,is_explicit,traits,duration_ms\nliked_song,"Flightless Bird, American Mouth",Iron & Wine,spotify:track:1f,https://open.spotify.com/track/1f?si=abc,False,PLAYABLE;SAVED,241917\npodcast,Some Show,Host,spotify:show:9,,False,,1');
+  assert.deepEqual(liked.map((r) => [r.title, r.creator, r.url, r.external_key]), [['Flightless Bird, American Mouth', 'Iron & Wine', 'https://open.spotify.com/track/1f', 'spotify:track:1f']], 'podcasts skipped, tracking stripped from links');
+  const lists = parseImport('spotify', [
+    'playlist_name,playlist_url,playlist_uri,position,track_title,artist_or_subtitle,track_uri,track_url,is_explicit,duration_ms,traits',
+    'rainy day jazz,u,p1,1,So What,Miles Davis,spotify:track:1,,False,1,PLAYABLE',
+    'late nights,u,p2,4,So What,Miles Davis,spotify:track:1,,False,1,PLAYABLE',
+    'late nights,u,p2,5,Teardrop,Massive Attack,spotify:track:2,,False,1,PLAYABLE',
+  ].join('\n'));
+  assert.equal(lists.length, 2, 'a song in two playlists is one save');
+  assert.equal(lists[0].collection, 'rainy day jazz · late nights');
+  assert.equal(lists[0].url, 'https://open.spotify.com/track/1');
+  const exportify = parseImport('spotify', '"Track URI","Track Name","Artist Name(s)","Album Name","Added At"\n"spotify:track:7","Dive","Olivia Dean","Messy","2024-02-01T00:00:00Z"');
+  assert.deepEqual([exportify[0].title, exportify[0].creator, exportify[0].collection, exportify[0].saved_at], ['Dive', 'Olivia Dean', 'Messy', '2024-02-01T00:00:00Z']);
+  assert.equal(parseImport('spotify', 'Nick Drake - Pink Moon')[0].creator, 'Nick Drake', 'plain lines still work');
+});
+
 test('importers: Instagram collections carry their names onto posts', () => {
   const json = {
     saved_saved_collections: [

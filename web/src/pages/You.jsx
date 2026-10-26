@@ -21,7 +21,7 @@ const KIND_LABEL = { song: 'Songs', place: 'Places', look: 'Looks', product: 'Pr
 // directly, but all of them let you download your own data.
 // `zip`: the files to pull out of the app's whole download, if that's what's uploaded.
 const IMPORTS = [
-  { source: 'spotify', icon: 'music', zip: [/YourLibrary\.json$/], how: 'Spotify → Account → Privacy → Download your data. Upload the ZIP or YourLibrary.json, or paste “Artist - Song” lines.' },
+  { source: 'spotify', icon: 'music', zip: [/YourLibrary\.json$/], how: 'Spotify → Account → Privacy → Download your data. Upload the ZIP or YourLibrary.json, a CSV of liked songs or playlists, or paste “Artist - Song” lines.' },
   { source: 'instagram', icon: 'image', zip: [/saved_collections\.json$/, /saved_posts\.json$/], how: 'This is how your saved posts come in. Accounts Centre → Your information and permissions → Download your information → choose Saved, format JSON. Upload the ZIP as it comes.' },
   { source: 'google_maps', icon: 'pin', zip: [/Saved Places\.json$/, /Saved\/[^/]+\.csv$/], how: 'Google Takeout → Saved and Maps (your places). Upload the ZIP, “Saved Places.json” or a list’s CSV.' },
   { source: 'pinterest', icon: 'bookmark', zip: [], how: 'Paste pin titles or board names, one per line.' },
