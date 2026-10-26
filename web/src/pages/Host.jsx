@@ -48,7 +48,7 @@ export default function Host() {
                 <p className="label themes-label">Pick a theme</p>
                 <div className="themes" role="radiogroup" aria-label="Theme">
                   {d.themes.map((t) => (
-                    <button key={t.index} role="radio" aria-checked={d.theme.index === t.index} className={`theme-pick ${d.theme.index === t.index ? 'on' : ''}`} onClick={() => setTheme(t.index)}>
+                    <button key={t.index} role="radio" aria-checked={d.theme.index === t.index} className={`theme-pick ${d.theme.index === t.index ? 'on' : ''}`} style={{ '--a': t.palette[0], '--b': t.palette[1] || t.palette[0] }} onClick={() => setTheme(t.index)}>
                       <span className="theme-dots" aria-hidden>{t.palette.map((c) => <i key={c} style={{ background: c }} />)}</span>
                       <b>{t.name}</b>
                       <small>because of {t.examples.slice(0, 2).map((x) => `“${x.length > 28 ? `${x.slice(0, 26)}…` : x}”`).join(', ')}{t.from > 2 ? ` and ${t.from - 2} more` : ''}</small>

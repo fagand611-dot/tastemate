@@ -1673,3 +1673,89 @@ a { color: var(--ink); }
 }
 :root[data-theme='dark'] .btn-outline, :root[data-theme='dark'] .btn-ghost, :root[data-theme='dark'] .share-btn { background: rgba(255, 255, 255, 0.08) !important; border-color: rgba(255, 255, 255, 0.16) !important; color: var(--ink) !important; }
 :root[data-theme='dark'] .btn-primary, :root[data-theme='dark'] .quick-btn.primary, :root[data-theme='dark'] .fab, :root[data-theme='dark'] .seg button.on, :root[data-theme='dark'] .topnav a.active { background: #f3eee8 !important; color: #1d1b19 !important; border-color: #f3eee8 !important; }
+
+/* ==========================================================================
+   Gradient glass: colour that glows through frosted, semi-translucent cards
+   (a blurred wash from a corner over milky glass), like light through
+   frosted acrylic.
+   ========================================================================== */
+:root {
+  --glass-hi: rgba(255, 255, 255, 0.82);
+  --glass-lo: rgba(255, 255, 255, 0.38);
+  --glass-edge: rgba(255, 255, 255, 0.85);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { --glass-hi: rgba(255, 255, 255, 0.09); --glass-lo: rgba(255, 255, 255, 0.02); --glass-edge: rgba(255, 255, 255, 0.12); } }
+:root[data-theme='dark'] { --glass-hi: rgba(255, 255, 255, 0.09); --glass-lo: rgba(255, 255, 255, 0.02); --glass-edge: rgba(255, 255, 255, 0.12); }
+
+/* Every glass card: milky at the top-left, clearer towards the bottom. */
+.panel, .card-plain, .card, .menu, .drawer, .dial, .twin, .people li, .side-card, .day-slot, .board-wrap, .venue-card, .style-card,
+.run li, .guest, .web-card, .room-key, .guest-details, .guest-rsvp, .notice, .postcard-back, .dialog, .seg, .tabs, .theme-pick, .quick-btn {
+  background: linear-gradient(160deg, var(--glass-hi), var(--glass-lo)) !important;
+  border-color: var(--glass-edge) !important;
+}
+
+/* You: the title card catches the sun from the top right. */
+.title-card {
+  background:
+    radial-gradient(55% 90% at 100% 0%, rgba(255, 160, 90, 0.28), transparent 60%),
+    radial-gradient(40% 60% at 0% 100%, rgba(255, 210, 170, 0.35), transparent 70%),
+    linear-gradient(160deg, var(--glass-hi), var(--glass-lo)) !important;
+}
+
+/* Tiles: each with its own coloured glow bleeding through the glass. */
+.tiles .tile {
+  background:
+    radial-gradient(85% 130% at 0% 0%, color-mix(in srgb, var(--tile) 55%, transparent), transparent 62%),
+    radial-gradient(70% 100% at 100% 100%, color-mix(in srgb, var(--tile) 30%, transparent), transparent 70%),
+    linear-gradient(160deg, var(--glass-hi), var(--glass-lo)) !important;
+  border-color: var(--glass-edge) !important;
+}
+.tiles .tile:nth-child(2) {
+  background:
+    radial-gradient(70% 120% at 88% 15%, rgba(255, 122, 26, 0.75), transparent 60%),
+    radial-gradient(60% 90% at 10% 100%, rgba(255, 170, 100, 0.25), transparent 70%),
+    linear-gradient(140deg, #1d1b19, #2e2723) !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+.tile-art { background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.55)) !important; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+
+/* Quick buttons: glass; the main one black with an ember. */
+.quick-btn.primary {
+  background: radial-gradient(90% 140% at 85% 0%, rgba(255, 122, 26, 0.7), transparent 60%), linear-gradient(140deg, #1d1b19, #2e2723) !important;
+}
+
+/* Host: each theme washed in its own colours; stats and scene cards glow. */
+.themes .theme-pick {
+  background:
+    radial-gradient(90% 140% at 0% 0%, color-mix(in srgb, var(--a, #ff9a45) 30%, transparent), transparent 65%),
+    radial-gradient(80% 120% at 100% 100%, color-mix(in srgb, var(--b, #ffc46b) 22%, transparent), transparent 70%),
+    linear-gradient(160deg, var(--glass-hi), var(--glass-lo)) !important;
+}
+.numbers li, .scene-card {
+  background:
+    radial-gradient(100% 140% at 0% 0%, color-mix(in srgb, var(--c, #ff9a45) 55%, transparent), transparent 65%),
+    linear-gradient(160deg, var(--glass-hi), var(--glass-lo)) !important;
+}
+.numbers li:nth-child(1) { --c: #ff9a45; } .numbers li:nth-child(2) { --c: #ffc46b; } .numbers li:nth-child(3) { --c: #f4a493; } .numbers li:nth-child(4) { --c: #ffb070; }
+.connect-app {
+  background:
+    radial-gradient(70% 160% at 0% 50%, color-mix(in srgb, var(--app) 40%, transparent), transparent 65%),
+    linear-gradient(160deg, var(--glass-hi), var(--glass-lo)) !important;
+}
+.connect-icon { background: color-mix(in srgb, var(--app) 55%, rgba(255, 255, 255, 0.6)) !important; }
+
+/* Next: tickets as tinted acrylic with a warm glow by the stub. */
+.ticket {
+  background:
+    radial-gradient(60% 120% at 100% 0%, rgba(255, 140, 60, 0.28), transparent 60%),
+    linear-gradient(140deg, color-mix(in srgb, var(--tk) 75%, rgba(255, 255, 255, 0.5)), var(--glass-lo)) !important;
+  -webkit-backdrop-filter: var(--glass);
+  backdrop-filter: var(--glass);
+}
+.ticket-stub { background: rgba(255, 255, 255, 0.45) !important; border-left: 1.5px dashed rgba(29, 27, 25, 0.25) !important; }
+.ticket-stub::before, .ticket-stub::after { border: 1px solid rgba(29, 27, 25, 0.12) !important; }
+.pair-ticket { background: radial-gradient(70% 140% at 100% 0%, rgba(255, 140, 60, 0.25), transparent 60%), linear-gradient(140deg, color-mix(in srgb, var(--tk) 70%, rgba(255, 255, 255, 0.5)), var(--glass-lo)) !important; }
+.pair-snap { background: linear-gradient(160deg, var(--glass-hi), var(--glass-lo)) !important; -webkit-backdrop-filter: var(--glass); backdrop-filter: var(--glass); }
+
+/* Taste board words and live dot pick up the orange gradient. */
+.live-dot.on { background: var(--orb); }
